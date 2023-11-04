@@ -4,11 +4,7 @@
 
 ## History
 
-Back in the University, we worked on a "Space Ship" (Nave) Macromedia Flash game that was never fully completed. 
-
-This project started on July 24, 2004, primarily developed by **José Carrero** ([GitHub](https://github.com/josercl) / [E-Mail](mailto:josercl@gmail.com)), with some input from me on [ActionScript and Flash](https://en.wikipedia.org/wiki/ActionScript). 
-
-In the end, we achieved in a couple of hours something cool and fun that I'll never forget.
+Back in the University, we worked on a "Space Ship" (Nave) Macromedia Flash game that was never fully completed. This project started on July 24, 2004, primarily developed by **José Carrero** ([GitHub](https://github.com/josercl) / [E-Mail](mailto:josercl@gmail.com)), with some input from me on [ActionScript and Flash](https://en.wikipedia.org/wiki/ActionScript). At the end, we achieved in a couple of hours something cool and fun that I'll never forget.
 
 ## Game Controls
 
