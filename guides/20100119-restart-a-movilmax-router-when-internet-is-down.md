@@ -1,6 +1,6 @@
 # Linux Shell Script to Restart a Movilmax Router When Internet is Down
 
-Movilmax is a WiMax provider available in Venezuela. Visit their website at: [www.movilmax.com](www.movilmax.com) 
+[Movilmax](https://www.movilmax.com) was a WiMax provider available in Venezuela. 
 
 ![Movilmax Router](media/cpe_samsung_modem.jpg) 
 
@@ -15,6 +15,9 @@ Movilmax is a WiMax provider available in Venezuela. Visit their website at: [ww
 - Speed Range: DL 4Mbps ~ UL 2Mbps
 - Power Consumption: 15W
 
-I've created a Linux shell script to automatically restart a Movilmax router (pictured above) when the Internet gateway is down. This script can be scheduled in your crontab. You can download the script [here](../scripts/mixed/movilmax/).
+I've created a [Linux shell script](movilmax/) to automatically restart a 
+Movilmax router (pictured above) when the Internet gateway is down. 
+This script can be scheduled in your crontab.
 
-I'm sharing this script here in case you're experiencing stability issues with your WiMax signal and need a reliable solution to maintain your connection.
+I'm sharing this script here in case you're experiencing stability issues
+with your WiMax signal and need a reliable solution to maintain your connection.
