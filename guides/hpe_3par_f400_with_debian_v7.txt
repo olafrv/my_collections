@@ -1,0 +1,1085 @@
+﻿----------------------------------------
+ GESTION DE VOLUMENES SAN DE HP 3PAR EN 
+ GNU/LINUX DEBIAN 6 (SQUEEZE) 
+----------------------------------------
+
+VERSION: 
+  Numero 7 del 29 de Mayo de 2013
+
+AUTOR: 
+
+ Olaf Reitmaier Veracierta <olafrv@gmail.com>
+
+PRERREQUISITOS:
+
+Conocimiento basicos a intermedios en:
+
+- Bus SCSI (Small Computer System Interface).
+- Red FC (Fiber Channel).
+- Arquitectura LVM (+snapshot).
+- Estructura de "/dev" y comando mknod.
+- Dipositivos de Bloques (/dev/sd*).
+- Estructura de "udev".
+- Sistema de archivos PROC "/proc".
+- Sistema de archivos SYS "/sys".
+- Tablas de Particiones (MS-DOS / GPT).
+
+ÍNDICE
+
+- INTERRELACION DE DISPOSITIVOS Y COMANDOS
+- CONFIGURACION DE MULTIPATH
+- CONFIGURACION DE LVM
+- CONFIGURACION DE UN VOLUMEN
+- PARTICIONES Y DESEMPEÑO DE E/S
+- PARTICIONES Y ALINEACION (CASOS ERRADOS)
+- USO DEL COMANDO PARTED (DETALLE)
+- CREACION DEL SISTEMA DE ARCHIVOS
+- REDIMENSION DE UN VOLUMEN SIN LVM
+- REDIMENSION DE UN VOLUMEN CON LVM
+- DESCONFIGURACION DE UN VOLUMEN
+- RESPALDO/RESTAURACION DE UN VOLUMEN
+- REFERENCIAS
+- ANEXOS
+
+P.D: Documento sin acentos.
+
+------------------------------------------
+ INTERRELACION DE DISPOSITIVOS Y COMANDOS
+------------------------------------------
+
+                  "Underlaying"    |- parted   -|
+                  (scsi devices)   |- fdisk    -|                          
+             |--> /dev/sd[a-z]+ <--|- blockdev -|--
+             |                                    |--- lvm, multipath
+Link:Map     |--> /dev/mapper <----|- dmsetup  -|--
+Hardware --- |    (aliases)        |- kpartx (/dev/mapper/prueba1) Mejor!
+             |                     |- partprobe (/dev/mapper/pruebap1)
+             |   
+             ---> SCSI Kernel Modules
+             |                                  
+             |                       |--> scsi_device
+             |                  |--> scsi_host 
+Evolucion    --> /sys/class <-- fc_host 
+                 /proc/scsi     |--> SAN 4/8 Gbps (4 FC Channels)
+                                     |--> HP 3PAR                  
+
+(1) Operaciones de Bajo Nivel (Tabla de Particiones / No LVM):
+    => Ejecutar comando sobre /dev/sd[a-z]+
+
+(2) Operaciones de Alto Nivel (Sistema de Archivos (FS) / LVM):
+    => Ejecutar comando sobre /dev/mapper
+
+
+----------------------------
+ CONFIGURACION DE MULTIPATH
+----------------------------               
+
+IMPORTANTE: Nunca utilizar los comandos "multipath -f" y/o "multipath -F".
+
+Un volumen almacenado en el HP 3PAR F400 es presentado a uno o varios 
+servidores a traves de la red de area de almacenamiento (SAN), en 
+nuestro caso soportada por canal de fibra (FC). El acceso a estos 
+volúmenes se hace a través de varias rutas "paths" y a este tipo 
+de volúmenes se le conoce como "multipath(s)".
+
+Cada tarjeta PCI Express (x8, x16) funCIONa a velocidades de 4GBP,
+en nuestro caso, utilizamos tarjetas Qlogic 2462/2562 y HP Brocade 81A.
+
+Así mismo, estaremos utilizando la siguiente configuración de kernel,
+firmware y sistema operativo:
+
+2.6.35-amd64 / firmware-qlogic (Wheezy) / Debian Squeeze (~Wheezy)
+3.2.0-amd64 / firmware-linux (Wheezy) / Debian Squeeze (~Wheezy)
+
+Hemos confirmado la existen de problemas con el uso de cifs-utils
+y el kernel 3.2.0-amd64, por lo tanto, no usamos las tarjetas 
+HP Brocade 81A cuando se requiere utilizar el comando "mount.cifs".
+
+Ahora bien, para instalar, configurar y usar volumenes "multipaths"
+en Debian debemos instalar los siguientes paquetes:
+
+apt-get install multipath-tools sg3-utils kpartx
+apt-get install firmware-linux 
+
+Y el firmware para las Qlogic? 
+
+apt-get install firmware-qlogic
+
+Y el firmware para las Brocade?
+
+http://foros.tsj-dem.gob.ve, buscar "Brocade", o consulte los Apéndices
+del presente documento.
+
+Opcionalmente, si deseamos ver las estadísticas de E/S para dispositivos
+/dev/sdX debemos instalar atop:
+
+apt-get install atop
+
+Después de instalar multipath-tools debe reiniciarse el equipo 
+para que sea cargado el modulo dm-multipath.
+
+/etc/init.d/multipathd start
+
+Al iniciar el equipos si todo ocurre se carga y ejecuta correctamente
+(verificar dmesg o dmesg.pl) aparecen nuevos dispositivos SCSI:
+
+cat /proc/scsi/scsi
+
+Attached devices:
+
+Host: scsi0 Channel: 00 Id: 02 Lun: 254
+  Vendor: 3PARdata Model: SES              Rev: 3120
+  Type:   Enclosure                        ANSI  SCSI revision: 06
+Host: scsi3 Channel: 00 Id: 02 Lun: 254
+  Vendor: 3PARdata Model: SES              Rev: 3120
+  Type:   Enclosure                        ANSI  SCSI revision: 06
+Host: scsi0 Channel: 00 Id: 03 Lun: 254
+  Vendor: 3PARdata Model: SES              Rev: 3120
+  Type:   Enclosure                        ANSI  SCSI revision: 06
+Host: scsi3 Channel: 00 Id: 03 Lun: 254
+  Vendor: 3PARdata Model: SES              Rev: 3120
+  Type:   Enclosure                        ANSI  SCSI revision: 06
+
+Host: scsi0 Channel: 00 Id: 02 Lun: 00
+  Vendor: 3PARdata Model: VV               Rev: 3120
+  Type:   Direct-Access                    ANSI  SCSI revision: 06
+Host: scsi0 Channel: 00 Id: 03 Lun: 00
+  Vendor: 3PARdata Model: VV               Rev: 3120
+  Type:   Direct-Access                    ANSI  SCSI revision: 06
+Host: scsi3 Channel: 00 Id: 02 Lun: 00
+  Vendor: 3PARdata Model: VV               Rev: 3120
+  Type:   Direct-Access                    ANSI  SCSI revision: 06
+Host: scsi3 Channel: 00 Id: 03 Lun: 00
+  Vendor: 3PARdata Model: VV               Rev: 3120
+  Type:   Direct-Access                    ANSI  SCSI revision: 06
+
+SIGNIFICADO: 
+
+(V)LUN 0 => 4 Paths (Direct-Access) => (V)LUN 0  
+Host => Host Interface / HBA FC Port
+Id => 3PAR FC Storage Target Port
+LUN => Logical Unit Number (Volume Id)
+
+Listar los path segun estado actual de software (multipathd): 
+
+multipath -ll
+
+IMPORTANTE: A veces para que se reflejen los cambios se requiere
+reiniciar el demonio multipathd:
+
+/etc/init.d/multipathd restart
+
+Finalmente, podemos ver los cambios:
+
+multipath -ll
+
+350002ac0000a38a8 dm-5 3PARdata,VV
+size=400G features='1 queue_if_no_path' hwhandler='0' wp=rw
+`-+- policy='round-robin 0' prio=4 status=active
+  |- 0:0:2:0 sda 8:0  active ready running
+  |- 0:0:3:0 sdb 8:16 active ready running
+  |- 3:0:2:0 sdc 8:32 active ready running
+  `- 3:0:3:0 sdd 8:48 active ready running
+
+SIGNIFICADO: 
+
+hcil => hbtl => i = t => interface = target
+uid multipath -dv3 <=> wid multipath.conf
+
+Para listar los paths segun el estado actual de hardware (firmware): 
+
+multipath -dv3
+
+===== paths list =====
+uuid              hcil    dev dev_t pri dm_st chk_st vend/prod/rev dev_st 
+350002ac0000a38a8 0:0:2:0 sda 8:0   1   undef ready  3PARdata,VV   running
+350002ac0000a38a8 0:0:3:0 sdb 8:16  1   undef ready  3PARdata,VV   running
+350002ac0000a38a8 3:0:2:0 sdc 8:32  1   undef ready  3PARdata,VV   running
+350002ac0000a38a8 3:0:3:0 sdd 8:48  1   undef ready  3PARdata,VV   running
+
+INVESTIGAR: dm_st => ¿undef?
+
+Las listas anteriores nos permiten configurar lo siguiente en el archivo
+/etc/multipath.conf
+
+multipaths{
+   multipath{
+      wwid   350002ac0000a38a8
+      alias prueba
+   }   
+   defaults{
+      polling_inteval 10
+      max_fds   8192
+   }
+   devices{
+      device{
+         vendor   "3PARdata"
+         product   "VV"
+         no_path_retry   18
+         features   "0"
+         hardware_handler   "0"
+         path_grouping_policy  multibus
+         getuid_callout   "/lib/udev/scsi_id --whitelisted --device=/dev/%n"
+         path_selector   "round-robin 0"
+         rr_weight   uniform
+         rr_min_io_rq   100
+         path_checker   tur
+         failback   immediate
+       }
+   }
+}
+
+Al ejecutar nuevamente:
+
+multipath -dv3
+
+Veremos el alias "prueba" asociado al volumen cuyo 
+wwid (uid) es "350002ac0000a38a8":
+
+prueba (350002ac0000a38a8) dm-5 3PARdata,VV
+size=400G features='1 queue_if_no_path' hwhandler='0' wp=rw
+`-+- policy='round-robin 0' prio=4 status=active
+  |- 0:0:2:0 sda 8:0  active ready running
+  |- 0:0:3:0 sdb 8:16 active ready running
+  |- 3:0:2:0 sdc 8:32 active ready running
+  `- 3:0:3:0 sdd 8:48 active ready running
+
+En caso de particiones SAN sin multipath, por ejemplo, 
+si /dev/sda no es multipath, añadimos la siguiente 
+seccion en la lista negra al mismo nivel de "multipaths"
+en el archivo multipath.conf:
+
+blacklist {
+   #devnode "^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*"
+   #devnode "^(hd|xvd|vd)[a-z]*"
+   #wwid "*"
+   devnode "sda"
+}
+
+Luego, reiniciamos y ejecutando:
+
+multipath -dv3
+
+Veremos en la salida una linea similar a:  
+
+Apr 01 11:49:52 | sda: device node name blacklisted
+
+----------------------
+ CONFIGURACION DE LVM
+----------------------
+
+Al igual que multipath, el servicio lvm escanea los discos en busqueda
+de estructuras LVM.  Para sacar provecho de multipath LVM no debe utilizar
+los "Underlaying devices" sino los aliases creados por Multipathd a través
+de la ayuda dmsetup (kpartx).
+
+En tal sentido, debemos editar el archivo /etc/lvm/lvm.conf y modificar
+los filtros (listas negras) de dispositivos como sigue (a=accept, r=reject):
+
+filter = [ "a|/dev/disk/by-id/dm-name-.*|", "a|cciss.*|", "r/.*/" ]
+
+Después de realizar este cambio debe reiniciar (reactivar) el servicio LVM:
+
+/etc/init.d/lvm2 start (Ojo!!! No funciona restart).
+
+La línea anterior es recomendada para el kernel 2.6.35, donde los discos
+presentados por la tarjeta de arreglos (HP SmartArray 410i) se muestran
+con la nomenclatura "/dev/cciss".
+
+Para mayor información consulte el ANEXO A "Using LVM on Multipath (DM MPIO)
+Devices" en el presente documento.
+
+-----------------------------
+ CONFIGURACION DE UN VOLUMEN 
+-----------------------------
+
+DECTECCION DE CAMBIOS SCSI
+
+IMPORTANTE: Underlaying devices <=> sdX
+
+IMPORTANTE: En el servidor debe estar conectado a la SAN a traves de su
+tarjeta HBA con volumenes (VLUN) presentados, para detectarlo por primera
+vez o detectar cambios en su configuracion, deberá ejecutar en el 
+siguiente orden:
+
+"X" es un número asociado a un puerto HBA de la interfaz de 
+canal de fibra, los cuales se ven en /sys/class/fc_host/hostX
+
+Metodo del SCSI device controller (Solo para detectar cambios de partiCION
+y configuraCION en los "underlaying devices" /dev/sdX):
+
+echo 1 > /sys/block/sdY/device/rescan
+
+"Y" en este caso se relaciona con TODOS los "underlaying devices" asociados
+al volumen multipath presentado al servidor "/dev/sd[abcd]" y el comando 
+"echo" debe ejecutarse para cada uno de ellos.
+
+Metodo del SCSI host controller:
+
+echo "- - -" > /sys/class/scsi_host/hostX/scan
+
+Metodo del SCSI fc host controller (Puede colgar el servidor, en especial 
+si hay comandos en estado "D", debe intentarse reiniciar "multipathd" y
+verificar si se muestran los cambios antes de forzar el "issue_lip"):
+
+echo "1" > /sys/class/fc_host/hostX/issue_lip
+
+Metodo SCSI device controller legacy (viejo):
+
+blockdev --rereadpt /dev/(sd*|dm-*)
+
+Finalmente, debemos verificar la nueva configuracion:
+
+multipath -dv3
+multipath -ll
+
+IMPORTANTE: A veces para que se reflejen los cambios se requiere
+reiniciar el demonio multipathd:
+
+/etc/init.d/multipathd restart
+
+-----------------------------
+ PARTICIONES Y DESEMPEÑO E/S 
+-----------------------------
+
+La mejor alineacion de una particion en un disco presentado por el 3PAR
+depende de la salida del comando:
+
+sg_vpd -p bl /dev/sdX
+
+OTL = Optimal Transfer Length (32768 sectors)
+OTLG = Optimal Transfer Length Granularity (32 block)
+
+Estos parametros definidos por el 3PAR se utilizan para configurar
+el acceso SCSI a disco de la forma más eficiente, utilizando el
+estándar "Block Limits VPD Page (SBC)" para el volumen presentado 
+del 3PAR. Entendiendo que, VPD se refiere a "Vital Product Data"
+y SBC a "SCSI Block Commands".
+
+Generalmente, y sabiendo que las páginas del 3PAR son de 16 KiB
+se debe crear y definir el inicio de la particion (/dev/sdX1) a
+los 32768 Sectores, 16 MiB o 0.02 GiB, indistintamente, ni antes ni 
+después. Esto se hace especificando la posiCION o tamaño del inicio 
+de la partiCION al utilizar uno (XOR: nunca ambos a la vez!) de los
+siguientes comandos:
+
+A) parted /dev/sdX
+   mklabel
+   gpt
+   unit gb
+   mkpart primary
+   unit s
+   1
+   ext4
+   0
+   -0
+   set 1 lvm on (Solo en caso LVM!!!)
+   p
+   quit
+
+B) fdisk -c -u /dev/sdX
+   n
+   1
+   [Enter]
+   p
+   q	
+   fdisk -l -u /dev/sdX
+
+IMPORTANTE: Para quitar el flag LVM ejecutar en parted: "set 1 lvm off".
+
+IMPORTANTE: Es preferible usar "parted", fdisk está orientado a "MS-DOS".
+
+IMPORTANTE: Una tabla de particiones tipo "msdos" permite tamaño maximo
+de particion de 2TiB, mientras que una tabla de particiones tipo "gpt" 
+permite un tamaño maximo de particion de 16TiB.
+
+********************************************************************************
+* ADVERTENCIA: Cree (edite) las particiones solo en uno de los "underlaying    *
+* devices" /dev/sdX preferiblemente en el primero. El resto se sincronizarán   * 
+* unos minutos posteriormente, mientras tanto tratar de editar los otros       *
+* dispositivos /dev/sdX "hermanos" generara errores. Sin embargo, Se puede     *
+* continuar trabajando en detectar las particiones con el  comando "kpartx"    *
+* sin problemas de corrupcion, porque el "Device Mapper" mantiene su tabla     *
+* de particiones (dmsetup table) fuera de los "underlaying devices" para el    *
+* dispostivo unico (volumen multipath).                                        * 
+********************************************************************************
+
+A continuacion se muestra la estructura de particiones, disco y 3PAR
+para una correcta alineacion y maximizacion operaciones de E/S:
+
+                                        X (Correcto!)
+linux /dev/sda1                         |
+linux /dev/sda    |----------------------
+3par BL VPD (SBC) |---------------------|
+3par Cache Page   |---- 1024 x 16KiB ---|
+3par Steps        |----- 128 x 128KiB---|
+3par Raid Set     |------ 32 x 512KiB---|
+Sectors           0                 32768
+Size (KiB)        0                 16384 
+Size (MiB)        0                 16.08  
+Size (GiB)        0                  0.02   
+
+La mejor alineacion de disco presentados por el 3PAR depende de la 
+salida del comando:
+
+sg_vpd -p bl /dev/sdX
+
+X = OTL = Optimal Transfer Length = 32768 Sectors
+
+
+------------------------------------------
+ PARTICIONES Y ALINEACION (CASOS ERRADOS) 
+------------------------------------------
+
+Todos los dispositivos RAID incluyendo los arreglos del 3PAR incurren en 
+una sobrecarga por el cálculo de paridad por cada operacion de escritura
+en disco. 
+
+En el 3PAR una sola lectura que abarca dos conjuntos (sets) RAID contiguos
+requieren solo dos cálculos de paridad calcular si la informacion está bien
+alineada, en caso contraro, resultarán tres cálculos de paridad, y por ende 
+un 30% de demora adicional en la operacion.
+
+A continuacion mostraremos los casos posible de desalineacion y mostraremos
+que la configuracion hecha con los comandos "fdisk" y "parted" anteriomente
+logran una alineacion correcta, aún cuando desperdician 16 MiB de espacio 
+al principio del volumen (/dev/sdX).
+
+1) Alineacion al Tamaño de Página de Cache del 3PAR:
+
+                       X = 4° Sector = 2KiB (Incorrecto!)
+linux /dev/sda1   |----------------------------------------
+linux /dev/sda  |------------------------------------------
+3par Cache Page |----|----|----|----|----|----|-----|-----|
+Size (KiB)      0   16   32   48   64   80   96   112   128
+Sectors         0   32   64   96  128  160  192   224   256
+
+La correccion y ajuste a este tipo de alineacion se recomienda para maximizar
+la velocidad de uso de la memoria caché del 3PAR que usa páginas de 16KiB.
+
+Si los sectores en /dev/sda son de 512 Bytes:
+
+X = 16KiB * 1024 (Bytes/KiB) / 512 (Bytes/Sector) = 32 Sectores
+
+En tal sentido, X debe ser el sector 32, en vez del sector 4.
+
+
+2) Alineacion al Tamaño del Conjunto (Set / "Strip") del RAID del 3PAR:
+
+                   X = 190° Sector = 95KiB (Incorrecto!)
+linux /dev/sda1 |  |---------------------------------------------
+linux /dev/sda  |------------------------------------------------
+3par Raid Set   |-----------------------|-----------------------|
+3par Steps      |----|-----|-----|------|-----|-----|-----|-----|
+Size (KiB)      0   128   256   384   512   640   768   896  1024
+Sectors         0         512        1024        1536        2048 
+
+Los ambientes que requieren un desempeño optimo de escritura aleatorias
+tales como los sistemas de transacciones en linea (OLTP), deben alinear
+sus particiones de disco al tamaño del "RAID Set".
+
+IMPORTANTE: RAID Set Size and Step Size pueden obtenerse en la consola de
+administracion del 3PAR > Exported > Virtual Volumens > Settings (Tab) > 
+User Space Allocation.
+
+X = N° Data Steps en un Raid Set * Step Size / Tamaño del sector de disco
+
+Si el tamaño del sector de disco /dev/sda es 512 Bytes:
+
+X = 4 * 128 KiB * 1024 (Bytes/KiB) / 512 (Bytes/Sector) = 1024 Sectores
+
+En tal sentido, X debe ser el sector 1024, en vez del sector 190.
+
+
+3) Alineacion con VPD del Volumen del 3PAR:
+
+                          X (Incorrecto!)
+linux /dev/sda1           |--------------
+linux /dev/sda    |----------------------
+3par BL VPD (SBC) |---------------------|
+Sectors           0                 32768
+Size (KiB)        0                 16384 
+Size (MiB)        0                 16.08  
+Size (GiB)        0                  0.02  
+
+X < 32768, implica obviar los parametros optimos de E/S de los volumenes
+del 3PAR tanto para aprovechar al máximo su memoria caché con respecto a
+las tasas de transferencia de bloques.
+
+----------------------------------
+ USO DEL COMANDO PARTED (DETALLE)
+----------------------------------
+
+parted /dev/sda 
+GNU Parted 2.3
+Using /dev/sda
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted) mklabel                                                          
+New disk label type? gpt                                                  
+Warning: The existing disk label on /dev/sda will be destroyed and all data on 
+this disk will be lost. Do you want to continue?
+Yes/No? Yes                                                               
+(parted) unit gb                                                          
+(parted) mkpart primary                                                   
+File system type?  [ext2]? ext4                                           
+Start? 0
+End? -0                                                                   
+(parted) p                                                                
+Model: 3PARdata VV (scsi)
+Disk /dev/sda: 429GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+
+Number  Start   End    Size   File system  Name     Flags
+ 1      0.02GB  429GB  429GB               primary
+
+(parted) unit s                                                           
+(parted) p                                                                
+Model: 3PARdata VV (scsi)
+Disk /dev/sda: 838860800s
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+
+Number  Start   End         Size        File system  Name     Flags
+ 1      32768s  838828031s  838795264s               primary
+
+(parted) unit mb                                                          
+(parted) p                                                                
+Model: 3PARdata VV (scsi)
+Disk /dev/sda: 429497MB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+
+Number  Start   End       Size      File system  Name     Flags
+ 1      16.8MB  429480MB  429463MB               primary
+
+(parted) quit
+
+
+----------------------------------
+ CREACION DEL SISTEMA DE ARCHIVOS
+----------------------------------
+
+IMPORTANTE: Siempre formatear los volumenes haciendo
+referencia a su alias (map) "/dev/mapper/*" o
+"/dev/mapper/*/*".
+
+IMPORTANTE: En linux es mejor una ext4.
+
+Full Provisioning (FP):
+mkfs.ext4 /dev/mapper/prueba
+
+Thin Provisioning (TP => Nuevo?), una de las siguientes alternativas:
+mkfs.ext4 -K /dev/mapper/prueba
+mkfs.ext4 -E nodiscard /dev/mapper/prueba
+
+Thin Provisioning (TP => Reuso?), una de las siguientes alternativas:
+mkfs.ext4 /dev/mapper/prueba
+mkfs.ext4 -E discard /dev/mapper/prueba
+
+-----------------------------------
+ REDIMENSION DE UN VOLUMEN SIN LVM
+-----------------------------------
+
+El procedimiento consta de los siguientes pasos:
+
+- Dectectar los cambios en el volumen. Vea la seccion 
+  "Configuracion de un Volumen" en este documento.
+- Modificar la tabla de particiones (eliminar y recrear).
+- Modificar la tabla de particiones (mapper / dmsetup).
+- Expandir el sistema de archivos.
+
+Determinar los dispositivos de bajo nivel "undelaying device",
+del multipath con alias "nearline" que deseamos modificar:
+
+# multipath -dv3 
+nearline (350002ac0000b38a8) dm-16 3PARdata,VV
+size=350G features='1 queue_if_no_path' hwhandler='0' wp=rw
+`-+- policy='round-robin 0' prio=4 status=active
+  |- 2:0:0:1 sde 8:64  active ready running
+  |- 2:0:1:1 sdf 8:80  active ready running
+  |- 5:0:0:1 sdg 8:96  active ready running
+  `- 5:0:1:1 sdh 8:112 active ready running
+
+Verificar de informacion sobre las particiones creadas
+en un multipath:
+
+dmsetup table
+dmsetup ls --target multipath
+dmsetup table --target multipath
+dmsetup info <uid>
+
+Escoger el primero de ellos y modificar la particion (eliminar / recrear):
+
+# parted /dev/sde
+GNU Parted 2.3
+Using /dev/sde
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted) unit s                                                           
+(parted) p                                                                
+Error: The backup GPT table is not at the end of the disk, as it should be.  
+This might mean that another operating system believes the disk is
+smaller.  Fix, by moving the backup to the end (and removing the old backup)?
+Fix/Ignore/Cancel? Fix                                                    
+Warning: Not all of the space available to /dev/sde appears to be used, you can
+fix the GPT to use all of the space (an extra 104857600 blocks) or
+continue with the current setting? 
+Fix/Ignore? Fix                                                           
+Model: 3PARdata VV (scsi)
+Disk /dev/sde: 734003200s
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+
+Number  Start   End         Size        File system  Name     Flags
+ 1      32768s  629112831s  629080064s  ext4         primary
+
+(parted) unit gb                                                          
+(parted) print                                                            
+Model: 3PARdata VV (scsi)
+Disk /dev/sde: 376GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+
+Number  Start   End    Size   File system  Name     Flags
+ 1      0.02GB  322GB  322GB  ext4         primary
+
+(parted) rm 1                                                             
+(parted) mkpart primary
+File system type?  [ext2]? ext4                                           
+Start? 0                                                                  
+End? -0                    
+                    
+
+Revisar la alineacion de 16KiB (32 blocks) al inicio del volumen fisico:
+
+
+(parted) p                                                                
+Model: 3PARdata VV (scsi)
+Disk /dev/sde: 376GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+
+Number  Start   End    Size   File system  Name     Flags
+ 1      0.02GB  376GB  376GB  ext4         primary
+
+(parted) unit s                                                           
+(parted) print                                                           
+Model: 3PARdata VV (scsi)
+Disk /dev/sde: 734003200s
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+
+Number  Start   End         Size        File system  Name     Flags
+ 1      32768s  733970431s  733937664s  ext4         primary
+
+(parted) quit
+
+
+Listar los valores actuales de inicio/fin (sectores) del registro
+de la particion "nearline1" en la tabla de particiones:
+
+# dmsetup table /dev/mapper/nearline1 
+0 629080064 linear 254:16 32768
+
+Listar los nuevos valores de inicio/fin (sectores) de la tabla de 
+particiones del volumen /dev/sde:
+
+# kpartx -l /dev/sde
+sde1 : 0 733937664 /dev/sde 32768
+
+Hacer un respaldo del registro de la tabla de particiones de la 
+particion "nearline1":
+
+# dmsetup table /dev/mapper/nearline1 > nearline1.txt
+
+Cambiar 629080064 por 733937664 en "nearline1.txt":
+
+# vim nearline1.txt 
+
+Suspender las operaciones de E/S en la particion:
+
+# dmsetup suspend /dev/mapper/nearline1
+
+Recargar la tabla de particiones "mapper":
+
+# dmsetup reload /dev/mapper/nearline1 nearline1.txt 
+
+Revisar los cambios aplicados a la tabla de particiones:
+
+# dmsetup table /dev/mapper/nearline1
+0 733937664 linear 254:16 32768
+
+Reanudar las operaciones de E/S en la particion:
+
+# dmsetup resume /dev/mapper/nearline1
+
+Sin desmontar la particion (en caliente) extender el sistema de archivos:
+
+# resize2fs /dev/mapper/nearline1 
+resize2fs 1.41.12 (17-May-2010)
+Filesystem at /dev/mapper/nearline1 is mounted on /mnt/nearline; on-line 
+resizing required
+old desc_blocks = 19, new_desc_blocks = 22
+Performing an on-line resize of /dev/mapper/nearline1 to 91742208 (4k) blocks.
+The filesystem on /dev/mapper/nearline1 is now 91742208 blocks long.
+
+
+-----------------------------------
+ REDIMENSION DE UN VOLUMEN CON LVM
+-----------------------------------
+
+El procedimiento consta de los siguientes pasos:
+
+- Dectectar los cambios en el volumen. Vea la seccion 
+  "Configuracion de un Volumen" en este documento.
+- Modificar la tabla de particiones (eliminar y recrear).
+- Modificar la tabla de particiones (mapper / dmsetup).
+- Redimensionar PV > VG > LV en LVM.
+- Expandir el sistema de archivos.
+
+Determinar los dispositivos de bajo nivel "undelaying device",
+del multipath con alias "nearline" que deseamos modificar:
+
+# multipath -dv3 
+linux (350002ac0000a38a8) dm-2 3PARdata,VV
+size=450G features='1 queue_if_no_path' hwhandler='0' wp=rw
+`-+- policy='round-robin 0' prio=4 status=active
+  |- 2:0:0:0 sda 8:0   active ready running
+  |- 5:0:0:0 sdc 8:32  active ready running
+  |- 2:0:1:0 sdb 8:16  active ready running
+  `- 5:0:1:0 sdd 8:48  active ready running
+
+Verificar de informacion sobre las particiones creadas
+en un multipath:
+
+dmsetup table
+dmsetup ls --target multipath
+dmsetup table --target multipath
+dmsetup info <uid>
+
+
+Escoger el primero de ellos y modificar la particion (eliminar / recrear):
+
+# parted /dev/sda
+GNU Parted 2.3
+Using /dev/sda
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted) print                                                            
+Model: 3PARdata VV (scsi)
+Disk /dev/sda: 483GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+
+Number  Start   End    Size   File system  Name     Flags
+ 1      16.8MB  429GB  429GB               primary
+
+(parted) rm 1                                                             
+(parted) mkpart primary                                                   
+File system type?  [ext2]? ext4                                           
+Start? 0                                                                  
+End? -0                                                                   
+Warning: The resulting partition is not properly aligned for best performance.
+Ignore/Cancel? Cancel
+(parted) unit gb                                                          
+(parted) mkpart primary                                                   
+File system type?  [ext2]? ext4                                           
+Start? 0                                                                  
+End? -0                                                                   
+(parted) print                                                            
+Model: 3PARdata VV (scsi)
+Disk /dev/sda: 483GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+
+Number  Start   End    Size   File system  Name     Flags
+ 1      0.02GB  483GB  483GB               primary
+
+(parted) quit   
+
+
+Listar los valores actuales de inicio/fin (sectores) del registro
+de la particion "linux-part1" en la tabla de particiones:
+
+# dmsetup table /dev/mapper/linux-part1 
+0 838795264 linear 254:2 32768
+
+Listar los nuevos valores de inicio/fin (sectores) de la tabla de 
+particiones del volumen /dev/sda:
+
+# kpartx -l /dev/sda
+sda1 : 0 943652864 /dev/sda 32768
+
+Hacer un respaldo del 
+Revisar los cambios aplicados a la tabla de particiones:
+# dmsetup table /dev/mapper/linux-part1
+0 943652864 linear 254:2 32768
+
+Extender el volumen fisico LVM (PV):
+# pvresize /dev/mapper/linux-part1
+registro de la tabla de la particion:
+# dmsetup table /dev/mapper/linux-part1 > linux1.txt
+
+Cambiar 838795264 por 943652864 en "linux1.txt":
+# vim linux1.txt
+
+Suspender las operaciones de E/S en la partiCION:
+# dmsetup suspend /dev/mapper/linux-part1
+
+Recargar la tabla de particiones "mapper":
+# dmsetup reload /dev/mapper/linux-part1 linux1.txt 
+
+Reanudar las operaciones de E/S en la partiCION:
+# dmsetup resume /dev/mapper/linux-part1
+
+Extender el volumen LVM (LV):
+# lvresize -L+50G /dev/vglinux/lv_linux2
+
+Sin desmontar la particion (en caliente) extender el sistema de archivos:
+resize2fs -p /dev/vglinux/lv_linux2
+
+
+--------------------------------
+ DESCONFIGURACION DE UN VOLUMEN
+--------------------------------
+
+DESCONFIGURACIÓN NO ES IGUAL ELIMINACIÓN, PARA ELIMINAR
+REPITA LOS PASOS DE CREACIÓN EN ORDEN INVERSO.
+
+El procedimiento consta de los siguientes pasos:
+
+- Desmontar el sistema de archivos (umount).
+- Desactivar VG en LVM.
+- Despresentar (eliminar los aliases) de particiones (mapper / dmsetup).
+- Detener el disposito SCSI.
+
+Recopilacion de informacion sobre el multipathd:
+
+multipath -ll
+multipath -dv3
+
+Verificar de informacion sobre las particiones creadas
+en un multipath:
+
+dmsetup table
+dmsetup ls --target multipath
+dmsetup table --target multipath
+dmsetup info <uid>
+
+Desmontar el sistema de archivos:
+
+umount /dev/mapper/z
+
+Desactivar el VG en LVM:
+
+vgchange -a n mi_vg
+
+Despresentar la particion al "mapper":
+
+kpartx -l /dev/mapper/z
+dmsetup remove /dev/mapper/zp1
+dmesg.pl
+dmsetup remove /dev/mapper/z
+dmesg.pl
+
+Ya no deben verse los "links" "zp1" ni "zp" en "/dev/mapper":
+
+ls -l /dev/mapper/
+
+Desactivar el dispositivo SCSI:
+
+SIGNIFICADO: 
+
+h=host, c=channel, t=target, l=lun
+
+Detener SCSI host controller:
+
+find /sys/class/scsi_host/host0/device/ | grep delete
+echo 1 > /sys/class/scsi_host/host0/device"..."/rport"..."/target"..."/"..."/delete
+
+find /sys/class/scsi_host/host3/device/ | grep delete
+echo 1 > /sys/class/scsi_host/host3/device"..."/rport"..."/target"..."/"..."/delete
+
+Detener SCSI device controller:
+
+find /sys/class/scsi_device/ | grep delete
+echo 1 > /sys/class/scsi_device/h:c:t:l/device/delete
+
+Detener (Legacy) SCSI device controller (Opcional, preferir el anterior):
+
+echo "scsi remove-single-device 0 0 0 0" > /proc/scsi/scsi
+
+Detener TODOS los dispositivos de bloques sdX "Underlaying devices" (OBLIGATORIO):
+
+echo 1 > /sys/block/sdX/device/delete 
+
+ADVERTENCIA: Si no se hace se bloquea las utilidades de LVM y dmsetup.
+
+Comentar el "alias" del "multipath" en multipath.conf
+
+ADVERTENCIA: No usar multipath -ll sin haber despresentado el volumen.
+
+ADVERTENCIA: Despresentar la particion del 3PAR, si no se hace al reiniciar 
+el servicio multipath reapareceran los dispositivos (aliases del mapper).
+
+Verificar la desparicion de /dev/sdX de multipath:
+
+multipath -dv3
+
+Finalmente, reiniciar el servicio:
+
+/etc/init.d/multipath-tool restart
+
+---------------------------------------
+ RESPALDO / RESTAURACION DE UN VOLUMEN
+---------------------------------------
+
+IMPORTANTE: Nunca debe realizarse respaldo de los "underlaying devices"
+/dev/sd[a-z][0-9]*, por lo tanto, debe anotarse la geometria de la tabla
+de particiones almancenada en los "underlaying devices".
+
+Para hacer el respaldo de la tabla de particiones: => ¿Documentar?
+
+Para hacer un respaldo de un particion sin LVM:
+
+dd if=/dev/mapper/prueba1 of=/mnt/respaldos/prueba1.img
+
+Para hacer un respaldo de volumen logico LVM, se debe verificar la ruta
+con lvdisplay, y luego realizar el respaldo:
+
+dd if=/dev/vg_00/lv_00 of=/mnt/respaldos/vg_00_lv_00.img
+
+Para restaurar se debe invetir los dispositivos "if=" y "of="
+al ejecutar el comando "dd".
+
+
+-------------
+ REFERENCIAS
+-------------
+
+- HP 3PAR Red Hat Enterprise Linux and Oracle Linux Implementation Guide (Version 3.86).
+  http://h20000.www2.hp.com/bizsupport/TechSupport/DocumentIndex.jsp?lang=en&cc=us&contentType=SupportManual&prodTypeId=18964&prodSeriesId=5044394
+
+- HP 3PAR Windows Server 2012 and Windows Server 2008 Implementation Guide (Version 8.11).
+  http://h20000.www2.hp.com/bizsupport/TechSupport/DocumentIndex.jsp?lang=en&cc=us&contentType=SupportManual&prodTypeId=18964&prodSeriesId=5044394
+
+- 24.4. Removing a Storage Device, Redhat, Inc.
+  https://access.redhat.com/knowledge/docs/en-US/Red_Hat_Enterprise_Linux/6/html/Storage_Administration_Guide/removing_devices.html
+
+- Linux & Advanced Storage Interfaces, Martin K. Petersen, Oracle Linux Engineering <martin.petersen@oracle.com>.
+  http://mkp.net/pubs/linux-advanced-storage.pdf
+
+- Suse Linux Enterprise Server 11 SP2 Storage Administration Guide.
+  http://webapp5.rrz.uni-hamburg.de/SuSe-Dokumentation/manual/sles-manuals_en/manual/stor_admin.html
+
+- Linux : Extending filesystem on expanded SAN LUN.
+  http://techmolecules.blogspot.com/2013/02/linux-extending-filesystem-on-expanded.html
+
+- Red Hat Cluster Suite: Configuring and Managing a Cluster.
+  Appendix C. Multipath-usage.txt File for Red Hat Enterprise Linux 4 Update 3.
+  http://www.centos.org/docs/4/html/rh-cs-en-4/ap-rhcs-dm-multipath-usagetxt.html
+
+- Recovering a Lost LVM Volume Disk By Jason Record, Cool Solutions Home (New) Novell Cool Solutions: AppNote.
+  http://www.novell.com/coolsolutions/appnote/19386.html
+
+- Using LVM on Multipath (DM MPIO) Devices
+  http://www.novell.com/support/kb/doc.php?id=7007498
+
+- The /proc filesystem
+  https://www.kernel.org/doc/Documentation/filesystems/proc.txt
+
+- The /sys filesystem
+  https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
+
+--------
+ ANEXOS
+--------
+
+--------------------------------------------
+A. Using LVM on Multipath (DM MPIO) Devices
+--------------------------------------------
+Source:  http://www.novell.com/support/kb/doc.php?id=7007498
+
+This document (7007498) is provided subject to the disclaimer at the end of this document.
+
+Environment
+
+Novell Open Enterprise Server 11 (OES 11) Linux
+Novell Open Enterprise Server 2 (OES 2) Linux
+Novell Open Enterprise Server 1 (OES 1) Linux
+SUSE Linux Enterprise Server 11
+SUSE Linux Enterprise Server 10
+SUSE Linux Enterprise Server 9
+Logical Volume Management (LVM / LVM2)
+Multipath IO (MPIO)
+
+>> Situation <<
+
+After implementing multipath (MPIO) on a LUN configured for use with LVM, iostat showed that only one of the active paths was in use. The LVM configuration had not been modified since the original server installation, and the default LVM filter (found in /etc/lvm.lvm.conf) was as follows:
+
+filter = [ "r|/dev/.*/by-path/.*|", "r|/dev/.*/by-id/.*|", "a/.*/" ]
+
+This filter rejects all block devices found in /dev/.*/by-path, and /dev/.*/by-id, and accepts all other block devices. As multipath device nodes are stored in /dev/disk/by-id in SLES11 (and /dev/disk/by-name in SLES9 and 10), these nodes are not scanned using this default configuration. Activating LVM on the /dev/sd* devices bypasses the multipath layer, and can result in a lack of fault tolerance and load balancing.
+
+Messages similar to the following are one indication of an incorrect configuration:
+
+Found duplicate PV pooyRaGTG0cDRqMJ2pesPpwhJdor78xQ: using /dev/sdr not /dev/sdb
+
+>> Resolution <<
+
+To resolve this issue, LVM must be configured to scan only the multipath device nodes - and specifically not scan the raw device nodes which represent individual paths to the SAN (/dev/sd*). It is the LVM filter (found in /etc/lvm/lvm.conf), that determines which devices should be scanned.
+
+Before determining the best LVM filter for a specific configuration, confirm the location and naming convention for the MPIO device nodes:
+
+# multipath -l
+36006016088d014007e0d0d2213ecdf11 dm-1 DGC,RAID 5
+size=50G features='1 queue_if_no_path' hwhandler='1 emc' wp=rw
+|-+- policy='round-robin 0' prio=-1 status=active
+| `- 5:0:1:0 sdd 8:48 active undef  running
+`-+- policy='round-robin 0' prio=-1 status=enabled
+  `- 5:0:0:0 sdc 8:32 active undef  running
+
+
+The `multipath -l` output provides the name (in this case, the WWID) of the LUN. This name is used in the creation of the device nodes found under /dev/disk/by-id:
+
+# ls -l /dev/disk/by-id/
+lrwxrwxrwx 1 root root 10 2011-01-06 11:42 dm-name-36006016088d014007e0d0d2213ecdf11 -> ../../dm-1
+lrwxrwxrwx 1 root root 10 2011-01-06 11:42 dm-uuid-mpath-36006016088d014007e0d0d2213ecdf11 -> ../../dm-1
+lrwxrwxrwx 1 root root  9 2011-01-05 14:40 edd-int13_dev80 -> ../../sda
+lrwxrwxrwx 1 root root 10 2011-01-05 14:40 edd-int13_dev80-part1 -> ../../sda1
+lrwxrwxrwx 1 root root 10 2011-01-05 14:40 edd-int13_dev80-part2 -> ../../sda2
+lrwxrwxrwx 1 root root 10 2011-01-05 14:40 edd-int13_dev80-part3 -> ../../sda3
+lrwxrwxrwx 1 root root  9 2011-01-05 14:40 scsi-36001c230ce31b9000eb0fa1e1cf986e7 -> ../../sda
+lrwxrwxrwx 1 root root 10 2011-01-05 14:40 scsi-36001c230ce31b9000eb0fa1e1cf986e7-part1 -> ../../sda1
+lrwxrwxrwx 1 root root 10 2011-01-05 14:40 scsi-36001c230ce31b9000eb0fa1e1cf986e7-part2 -> ../../sda2
+lrwxrwxrwx 1 root root 10 2011-01-05 14:40 scsi-36001c230ce31b9000eb0fa1e1cf986e7-part3 -> ../../sda3
+lrwxrwxrwx 1 root root 10 2011-01-06 11:42 scsi-36006016088d014007e0d0d2213ecdf11 -> ../../dm-1
+
+
+The above output shows three names for the LUN (dm-name-<WWID>, dm-uuid-mpath-<WWID>, and scsi-<WWID>), which are all symlinked to the /dev/dm-1 device. Any of these devices can be used in the LVM configuration, but as some names can also be links to individual devices (such as the edd-* and scsi-<ID> devices, which symlink to /dev/sda*), using dm-name-*, or dm-uuid-mpath-* is recommended.
+
+Given the above configuration, two possible recommended LVM filters are:
+
+filter = [ "a|/dev/disk/by-id/dm-uuid-.*mpath-.*|", "r/.*/" ]
+filter = [ "a|/dev/disk/by-id/dm-name-.*|", "r/.*/" ]
+
+This filter specifically accepts the /dev/disk/by-id/dm-uuid-.*mpath-.*, and /dev/disk/by-id/dm-name-.* devices, and excludes everything else. (Note - the dm-uuid-.*mpath-.* syntax accepts both entire devices, and partitions on those devices.) As the filter is processed in order, ending the regular expression in a rejection of all devices ensure unexpected devices are not activated improperly.
+
+After modifying the filter, rescan for LVM physical volumes (PVs) using `pvscan`. If the configuration is correct, the output should appear similar to the following:
+
+# pvscan
+  PV /dev/disk/by-id/dm-name-36006016088d014007e0d0d2213ecdf11   VG system_vg   lvm2 [50.00 GB / 0    free]
+  Total: 1 [50.00 GB] / in use: 1 [50.00 GB] / in no VG: 0 [0   ]
+
+If the PV is not found, or another error is returned, check the filter line in /etc/lvm/lvm.conf for typos, and re-run the scan. (Further information can be obtained using `pvscan -vvv`.) If the PV is found on the correct /dev/disk/by-id device, the rest of the LVM configuration should be refreshed by performing a `vgscan`, followed by `lvscan`. The configuration can then be further confirmed using dmsetup as follows:
+
+# dmsetup ls --tree
+system_vg-data_lv (253:1)
+ └─36006016088d014007e0d0d2213ecdf11 (253:0)
+    ├─ (8:32)
+    └─ (8:48)
+
+The above dmsetup output confirms that the 'system_vg' volume group is being activated through the device-mapper device node, which is then accessible through two distinct paths. (Note - The distinction between active and passive paths is not visible through this tool.)
+
+The instructions for SLES9 or SLES10 are almost the same as the instructions for SLES11. The only difference is that the MPIO device nodes are found in the /dev/disk/by-name directory. Confirm the device names using the instructions listed above, and update the LVM filter accordingly.
+
+

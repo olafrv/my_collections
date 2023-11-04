@@ -1,0 +1,921 @@
+====================================================
+        MANUAL DE INSTALACIÓN INTEGRADA DE 
+         UNA APLICACIÓN WEB JAVA SOBRE UNA
+             BASE DE DATOS POSTGRESQL
+
+            GNU/Linux Debian Etch 4.0 + 
+       APACHE 2 WEB SERVER + APACHE TOMCAT 5
+       MOD-JK + POSTGRESQL 7.4 + TAPE-BACKUP
+
+            (Caracas, 03/09/2008, v1.5)       
+====================================================
+
+=====================
+ Índice de Contenido
+=====================
+
+  1.- Versiones, Autor y Licencia.
+  2.- Advertencias y Notas.
+  3.- Introducción.
+  4.- Sistema Operativo (GNU/Linux Debian).
+  5.- Servidor de Base de Datos (PostgreSQL).
+  6.- Servidor de Aplicaciones (Tomcat).
+  7.- Servidor de Páginas Web (Apache).
+  8.- Redirección de Servidores (mod-jk).
+  9.- Respaldos del Servidor (tape-backup).
+
+================================
+ 1. Versiones, Autor y Licencia
+================================
+
+ Modificado por: Ing. Olaf Reitamier <olafrv@gmail.com> (03/09/2008, v1.5)
+		 Mejoras en el script de inicio de tomcat /etc/init.d/tomcat
+
+ Modificado por: Ing. Olaf Reitamier <olafrv@gmail.com> (14/07/2008, v1.4)
+		 Rediseño de las instrucciones de instalación de Tomcat
+                 para cumplir con las políticas de Debian, disponibles en:
+		 http://www.debian.org/doc/devel-manuals#policy
+
+ Modificado por: Ing. Olaf Reitamier <olafrv@gmail.com> (14/07/2008, v1.3)
+		 Eliminación de los respaldos en la unidad local en cinta
+		 del servidor, ahora tape-backup envía los respaldos vía
+		 SAMBA con el comando smbclient a una carpeta compartida
+                 de un servidor Windows, y finalmente, la insfraestructura
+                 de respaldo de la DEM hace respaldo a esta última.  Por lo
+                 tanto, también se actualizaron las políticas de respaldo y
+                 para desligar este manual de las mismas se hace referencia
+                 a un documento externo en dicha sección.
+          
+  Elaborado por: Disponible en su versión (original) actualizada y pública en
+                 http://olafrv.googlepages.com/ o directamente a través de
+		 http://olafrv.googlepages.com/debian4_apache2_tomcat5_pgsql74.txt
+                 del Ing. Olaf Reitmaier Veracierta <olafrv@gmail.com>, con 
+		 licencia GNU Free Documentation License en su versión 1.2
+                 de Noviembre de 2002 o posteriores.
+
+       Licencia: Este documento está protegido por la licencia
+                 GNU Free Documentation License en su versión 1.2
+                 de Noviembre de 2002 o posteriores.
+
+=========================
+ 2. Advertencias y Notas
+=========================
+
+ADVERTENCIA: No sea imprudente consulte a un experto si no está seguro de lo que está haciendo.
+
+ADVERTENCIA: No haga cambios en caliente y/o en producción.
+
+ADVERTENCIA: Haga respaldos.
+
+ADVERTENCIA: Defina contraseñas de longitud mayor a 8 caracteres incluyendo mayúsculas, minúsculas y números, evite utilizar palabras existentes en el diccionario o datos personales.
+
+ADVERTENCIA: Evite equivocaciones al ejecutar comandos como cualquier usuario y en especial como superusuario "root".
+
+ADVERTENCIA: Tome en cuenta que, cambiar permisos de carpetas y archivos de forma innecesaria puede traer problemas de seguridad graves, pero dejarlos sin cambiar por un olvido también, esté atento a ambas cosas.
+
+ADVERTENCIA: Configure los servicios para que NO sean ejecutados como superusuario "root".  Este manual permite que se cumpla con esta regla con la finalidad de evitar una escalada de privilegios si por cualquier circunstancia se devela una vulnerabilidad.
+
+NOTA: Ejecute el comando "man" seguido del nombre de algo para obtener ayuda inmediata sobre ese algo, presione q para salir. Al leer la ayuda de un comando aparecen expresiones como crontab(5), que significa que debe ejecutar el comando man 5 crontab (man 5 de crontab) para obtener la página 5 del manual de crontab.
+
+NOTA: El comando pico es uno de tantos editores de texto (nano, vi, joe...) de linux.
+
+NOTA: El comando pwd imprime en pantalla el directorio donde Ud. se encuenta actualmente.
+
+NOTA: $ especifica una línea de comando que puede ejecutarse como cualquier usuario.
+
+NOTA: x$ especifica una línea de comando que debe ejecutarse como el usuario x.
+
+NOTA: La versión de tape-backup utilizada es la del 14 de Julio de 2008.
+
+NOTA: La versión del entorno del lenguaje Java Development Kit (JDK) utilizada es la nro. 1.5.0_02-b09 de Sun Microsystems.
+
+NOTA: La versión de Apache Tomcat utilizada es la nro. 5.0.28 y requiere un entorno Java de Sun Microsystems para su funcionamiento correcto.
+
+NOTA: La versión de PostgreSQL utilizada es la nro. 7.4 provista por Linux Debian Etch 4.0 r3.
+
+NOTA: La versión de Apache Web Server utilizada es la nro. 2.2.3 provista por Linux Debian Etch 4.0 r3, más específicamente:
+
+Server version: Apache/2.2.3
+Server built:   Jan 27 2008 18:13:21
+$ /usr/sbin/apache2 -V
+Server version: Apache/2.2.3
+Server built:   Jan 27 2008 18:13:21
+Server's Module Magic Number: 20051115:3
+Server loaded:  APR 1.2.7, APR-Util 1.2.7
+Compiled using: APR 1.2.7, APR-Util 1.2.7
+Architecture:   32-bit
+Server MPM:     Prefork
+  threaded:     no
+    forked:     yes (variable process count)
+
+Compiled with...
+
+ -D APACHE_MPM_DIR="server/mpm/prefork"
+ -D APR_HAS_SENDFILE
+ -D APR_HAS_MMAP
+ -D APR_HAVE_IPV6 (IPv4-mapped addresses enabled)
+ -D APR_USE_SYSVSEM_SERIALIZE
+ -D APR_USE_PTHREAD_SERIALIZE
+ -D SINGLE_LISTEN_UNSERIALIZED_ACCEPT
+ -D APR_HAS_OTHER_CHILD
+ -D AP_HAVE_RELIABLE_PIPED_LOGS
+ -D DYNAMIC_MODULE_LIMIT=128
+ -D HTTPD_ROOT=""
+ -D SUEXEC_BIN="/usr/lib/apache2/suexec"
+ -D DEFAULT_PIDLOG="/var/run/apache2.pid"
+ -D DEFAULT_SCOREBOARD="logs/apache_runtime_status"
+ -D DEFAULT_LOCKFILE="/var/run/apache2/accept.lock"
+ -D DEFAULT_ERRORLOG="logs/error_log"
+ -D AP_TYPES_CONFIG_FILE="/etc/apache2/mime.types"
+ -D SERVER_CONFIG_FILE="/etc/apache2/apache2.conf"
+
+NOTA: ctrl + x, significa presione la tecla control y la tecla x, simultáneamente.
+
+=================
+ 3. Introducción
+=================
+
+El presente manual establece como debe realizarse la instalación integrada de: 
+
+- Servidor de Páginas Web - "Apache Web Server" / "Módulo mod-jk"
+- Servidor de Aplicaciones Web - "Java" / "Apache Tomcat"
+- Servidor de Base de Datos - "PostgreSQL"
+- Script de Respaldos - "Tape-Backup" 
+
+Tomando en cuenta las mejores prácticas y garantizando los niveles básicos de eficiencia y seguridad de la información, entre las cuales, se incluyen:
+
+- Balanceo de las solicitudes HTTP y redirección de las mismas al servicio de TOMCAT.
+- Encarcelamiento del servidor TOMCAT en una celda sin privilegios de administrador.
+- Respaldo de archivos a disco (y/o en cinta) mediante scripts configurables.
+- Configuración de un cortafuegos de primer nivel.
+
+Cumplimiento de las Políticas del Sistema Operativo GNU/Linux Debian disponibles en http://www.debian.org/doc/devel-manuals#policy
+
+
+=========================================
+ 4. Sistema Operativo (GNU/Linux Debian)
+=========================================
+
+-------------------------------------
+ 4.1. Instalación y Particionamiento
+-------------------------------------
+
+Si los administadores de la plataforma no disponen de un(os) CDs o DVDs (bootables) con el sistema operativo GNU/Linux Debian, este puede ser descargado desde la dirección en Internet http://www.debian.org.
+
+Para completar la instalación se debe seguir el manual internacional de instalación de Debian, puede leerse en:
+
+http://www.debian.org/releases/stable/installmanual,
+
+teniendo en cuenta, que la instalación depende de la arquitectura de hardware del computador.
+
+Con respecto al particionamiento del disco vale la pena mencionar lo siguiente:
+
+- Deben crearse las siguiente particiones ordenadas y con tamaño aproximado:
+
+  /         	 15 GB   (Contendrá todo lo demás)
+  SWAP	   	2-5 GB  (Espacio para memoria virtual)
+  /var     	XXX GB  (Contendrá los datos variables que más espacio ocupan)
+  /var/backups   XX GB  (Opcional, Contendrá los datos variables que más espacio ocupan)
+  /home	    	 20 GB  (Opcional, contendrá los datos de los usuarios)
+
+SWAP: Va de 2do para aprovechar la mayor velocidad de lectura en ese lugar del disco.
+
+- Se puede particionar a conveniencia, pero debe asignarse espacio suficiente a /var (y por inclusión a /var/backups), limitando el espacio en /, /home y SWAP.
+
+- Se puede particionar según el tamaño de la instalación de Debian. Debian 4.0 incluye en total 3 DVDs de max. 5 GB c/u para un total de 15 GB. Por lo tanto, dejando reservados 15 GB para /, 5 GB para la memoria SWAP, el resto debería distribuirse a razón de 70%, 20%, 10% para /var, /var/backups y /home respectivamente.
+
+Instale el "Entorno de Escritorio" para que esté disponible la interfaz gráfica del gestor de ventanas GNOME.
+
+---------------------------
+ 4.2. Creación de Usuarios
+---------------------------
+
+Ejecute el siguiente comando para crear al usuario cuyo login es "x":
+
+root$ adduser  --home /home/x --shell /bin/bash --ingroup users x
+
+------------------
+ 4.3. Cortafuegos
+------------------
+
+Para habilitar el cortafuegos (firewall) del sistema operativo instale y ejecute la aplicación "firestarter" incluída con el sistema operativo Debian:
+
+root$ apt-get install firestarter
+
+Reinice la sesión gráfica del usuario y busque en el menú de GNOME la aplicación referida como "Cortafuegos", o bien, utilice sudo para obtener privilegios de administrador al ejecutar el comando firestarter desde el terminal (Véa la sección "Ejecución de Comando como Superusuario"):
+
+x$ sudo firestarter
+
+Seguidamente, configure las reglas para permitir el tráfico entrante al puerto (HTTP) 80, (POSTGRES) 5432 y (SSH) 22, activar el filtro de paquetes ICMP, bloquear el tráfico de difusón interno y externo, tanto la intefaz pública como local debería ser la tarjeta de red principal eth0 (si sólo hay una interfaz de red). Finalmente, seleccione descartar silenciosamente los paquetes y aplique las normativas.
+
+---------------------------------------
+ 4.4. Servidor de Terminales (OpenSSH)
+---------------------------------------
+
+Instale el Servidor SSH incluído con el sistema operativo Debian:
+
+root$ apt-get install openssh-server
+
+Editar el archivo /etc/ssh/sshd_config:
+
+root$ pico /etc/ssh/sshd_config
+
+Colocar o cambiar la siguiente línea:
+
+PermitRootLogin no
+
+Reinicie el servicio:
+
+/etc/init.d/ssh restart
+
+Para conectarse desde cualquier computador:
+
+ssh servidor -l usuario -X
+
+NOTA: Si el servidor gráfico X está ejecutándose en el servidor y se ejecuta un comando que necesita la interfaz gráfica del gestor de ventana GNOME, dicha ventana será mostrada en la estación remota desde donde Ud. inicio la conexión ssh.
+
+----------------------------------------------
+ 4.5. Ejecución de Comandos como Superusuario
+----------------------------------------------
+
+Edite el archivo /etc/sudoers (con el comando visudo para una retroalimentación si comete algún error al editar el archivo):
+
+root$ visudo
+
+Edite el texto que aparece en pantalla para que incluya las siguientes políticas y comentarios (inician con #):
+
+#
+# /etc/sudoers
+#
+# This file MUST be edited with the 'visudo' command as root.
+#
+# See the man page for details on how to write a sudoers file.
+#
+Defaults        env_reset,insults
+
+# Host alias specification
+
+# User alias specification
+
+# Database Administrators
+User_Alias      BD_ADMIN = juan, maria
+
+# Tomcat Administrators
+User_Alias      APP_ADMIN = pedro
+
+# System Administrators
+User_Alias      SYS_ADMIN = luis
+
+# Cmnd alias specification
+Cmnd_Alias      BD_SERVICE = /etc/init.d/postgresql-7.4 [A-z]* , \
+                             /bin/su - postgres
+
+Cmnd_Alias      APP_SERVICE = /etc/init.d/tomcat [A-z]* , \
+                             /bin/su - tomcat
+
+# User privilege specification
+root ALL = (ALL) ALL
+
+# User Hosts = (USERS) COMMANDS
+# User Hosts = COMMANDS
+BD_ADMIN ALL = BD_SERVICE
+APP_ADMIN ALL = APP_SERVICE
+SYS_ADMIN ALL = (ALL) ALL
+
+
+===========================================
+ 5. Servidor de Base de Datos (PostgreSQL)
+===========================================
+
+------------------------------
+ 5.1. Instalación y Ejecución
+------------------------------
+
+Instale el servidor de base de datos:
+
+root$ apt-get install postgresql*
+
+NOTA: Reemplaze el * por una de las versiones disponibles para instalar.
+
+Para iniciar el servicio:
+
+root$ /etc/init.d/postgresql start
+
+Para verificar el estado del servicio:
+
+root$ /etc/init.d/postgresql status
+
+Para detener el servicio:
+
+root$ /etc/init.d/postgresql stop
+
+Para reiniciar (start + stop):
+
+root$ /etc/init.d/postgresql restart
+
+--------------------
+ 5.2. Configuración
+--------------------
+
+Para conexiones al servicio de base de datos vía TCP/IP edite el archivo:
+
+root$ pico /etc/postgresql/*/main/postgresql.conf
+
+NOTA: Reemplaze el * por una de las versiones que Ud. instaló.
+
+Cambie o agregue las siguientes líneas:
+
+tcpip_socket = true
+port = 5432
+
+Para habilitar el registro de auditoría de base de datos edite el archivo:
+
+root$ pico /etc/postgresql/X.Y/main/postgresql.conf
+
+Cambie o agregue las siguientes líneas:
+
+log_connections = true
+log_duration = true
+log_pid = true
+log_statement = true
+log_timestamp = true
+log_hostname = true
+log_source_port = true
+
+Seguidamente, edite el archivo pg_hba.conf: 
+
+NOTA: El usuario postgres es el usuario administrador de base de datos, no es recomendable que se creen los contenidos dentro de una base de datos, espacio de tablas o esquema como este usuario, cada usuario debe tener su propio esquema y su propia base de datos.
+
+root$ pico /etc/postgresql/X.Y/main/pg_hba.conf
+
+Comente todas las líneas existentes con #, y cambie o agregue o descomente sólo las siguientes líneas:
+
+1.- Para permitir el acceso a través de un socket local al usuario postgres habiendo iniciado sesión localmente en el servidor:
+
+local   all     postgres    			ident sameuser
+
+2.- Para permitir conexiones TCP/IP locales (como las requeridas por tomcat) al usuario postgres siempre y cuando provea su contraseña como usuario postgres en la base de datos:
+
+host    all     postgres        127.0.0.1/32	md5
+
+3.- Para permitir conexiones TCP/IP remotas (como las requeridas por otros usuario para la interfaz gráfica pgadmin o psql remoto) desde la IP A.B.C.D al usuario xxxx, siempre y cuando, provea su contraseña como usuario xxxx en la base de datos:
+
+host    all     xxxx        A.B.C.D/32	md5
+
+NOTA: Todo DBA debe ser cuidadoso de estas reglas y ser tan granular definiéndolas como las mejores prácticas lo establecen.
+
+-------------
+ 5.3. Acceso
+-------------
+
+Si Ud. es un usuario configurado en el archivo /etc/sudoers, entonces (localmente) Ud. puede ejecutar:
+
+$ sudo su - postgres
+
+Si Ud. es el superusuario (localmente) puede ejecutar:
+
+root$ su - postgres
+
+Ahora bien, cree la base de datos postgres (sólo si no existe) para que el usuario postgres pueda conectarse a su base de datos predeterminada, ejecutando el comando:
+
+postgres$ createdb postgres
+
+Para cambiar la contraseña de acceso del usuario postgres:
+
+postgres$ psql
+psql> alter user postgres with password '12345'
+
+------------------------------------------
+ 5.4. Conexión remota a una base de datos
+------------------------------------------
+
+NOTA: La opción -W del comando psql hace que el mismo pregunte por la contraseña del usuario (puede ser obviada, si la regla en el archivo pg_hba.conf incluye trust o ident sameuser).
+
+Para acceder local/remotamente a través de un archivo de socket:
+$ psql -U usuario -W 
+$ psql -U usuario -d basededatos -W  
+
+Para acceder local/remotamente a través de una conexión TCP/IP:
+
+$ psql -h servidor -p 5432 -U usuario -W 
+$ psql -h servidor -p 5432 -U usuario -d basededatos -W  
+
+--------------------------------------
+ 5.5. Extracción de una base de datos 
+--------------------------------------
+
+NOTA: La opción -O puede utilizarse para obviar los permisos otorgados (GRANTs) a los usuarios sobre los objetos en la base de datos.
+
+NOTA: La opción -W del comando psql hace que el mismo pregunte por la contraseña del usuario (puede ser obviada, si la regla en el archivo pg_hba.conf incluye trust o ident sameuser).
+
+Se puede extraer la base de datos "bd" sobre la cual el usuario "usu" tiene acceso y guardarla en el archivo "a.sql":
+
+A través de un socket:
+$ pg_dump -U "usu" -W -d "bd" > "a.sql"
+
+A través de una conexión TCP/IP al servidor "ser":
+$ pg_dump -h "ser" -p 5432 -U "usu" -W -d "bd" > "a.sql"
+
+----------------------------------------
+ 5.6. Restauración de una base de datos
+----------------------------------------
+
+NOTA: La opción -O puede utilizarse para obviar los permisos otorgados (GRANTs) a los usuarios sobre los objetos en la base de datos.
+
+NOTA: La opción -W del comando psql hace que el mismo pregunte por la contraseña del usuario (puede ser obviada, si la regla en el archivo pg_hba.conf incluye trust o ident sameuser).
+
+NOTA: Si la base de datos bd no esta creada debe crearla previamente y darle permisos a usuario si usuario no es el dueño.
+
+A partir de una extracción de la base de datos "bd" en el archivo "a.sql":
+
+A través de un socket:
+$ psql -U usuario -W -d bd -f a.sql 2>&1 > salida.log
+
+A través de una conexión TCP/IP:
+$ psql -h servidor -p 5432 -U usuario -W -d bd -f a.sql 2>&1 > salida.log
+
+
+=============================================
+ 6. Servidor de Aplicaciones (Apache Tomcat)
+=============================================
+
+----------------------------------
+ 6.1 Instalación del Entorno Java
+----------------------------------
+
+El Java Development Kit 2 puede ser descargado de java.sun.com.  Descargue al directorio /root las version ejecutable binaria para Linux (jdk*.bin) y extraiga sus archivos:
+
+root$ cd
+root$ chmod 755 jdk.bin
+root$ ./jdk.bin
+
+Edite el archivo /etc/profile:
+
+root$ pico /etc/profile
+
+Agregando las siguientes líneas al final:
+
+export JAVA_HOME=/var/opt/java
+export PATH=$PATH:$JAVA_HOME/bin
+
+----------------------------
+ 6.2. Instalación de Tomcat
+----------------------------
+
+-------------------------------------------
+ 6.2.1. Instalación y Configuración Básica
+-------------------------------------------
+
+Los archivos del servidor de aplicaciones Web escritas en lenguaje Java, pueden descargarse de www.apache.org > projects > alphabetical > Apache Tomcat, o bien, entrando a directamente a tomcat.apache.org.
+
+Descargue al directorio /root la versión requerida en formato "binario" navegando hasta "bin" en la sección "Archives" de Apache Tomcat en la URL:
+
+http://archive.apache.org/dist/tomcat.
+
+Descomprima los archivos de la aplicación tomcat en /var/opt:
+
+root$ cd /var/opt
+root$ tar xvfz /root/jakarta-tomcat.tar.gz 
+
+Edite el archivo /etc/profile:
+
+root$ pico /etc/profile
+
+Agregando las siguientes líneas al final:
+
+export TOMCAT_HOME=/var/opt/tomcat
+
+Edite el archivo tomcat-users.xml:
+
+root$ /var/opt/tomcat/conf/tomcat-users.xml
+
+Debe quedar algo parecido a lo siguiente:
+
+<?xml version='1.0' encoding='utf-8'?>
+<tomcat-users>
+  <role rolename="tomcat"/>
+  <role rolename="admin"/>
+  <role rolename="manager"/>
+  <user username="tomcat" password="12345" roles="tomcat,admin,manager"/>
+</tomcat-users>
+
+Ud. utilizará el usuario tomcat especificado en el archivo tomcat-users.xml para acceder a la interfaces de administración y gerencia de tomcat.
+
+
+-------------------------------------
+ 6.2.2. Encarcelamiento del Servicio 
+-------------------------------------
+
+Ahora debe crear el usuario y el grupo de sistema (con identificador menor a 1000 y sin contraseña) llamado "tomcat" cuyo directorio principal sea preferiblemente /var/opt/tomcat, a través del comando:
+
+root$ adduser --system --home /var/opt/tomcat --shell /bin/bash --no-create-home --group tomcat --disabled-password
+
+Cambie los permisos de los archivos de tomcat para que solo puedan ser accedidos por su respectivo usuario y grupo:
+
+root$ chown -R tomcat:tomcat /var/opt/tomcat
+root$ chmod -R 770 /var/opt/tomcat
+
+-----------------------------------------------
+ 6.2.3. Comandos Adicionales de Administración
+-----------------------------------------------
+
+Cree el archivo /etc/init.d/tomcat y dele permisos de ejecución:
+
+root$ echo > /etc/init.d/tomcat
+root$ chmod 755 /etc/init.d/tomcat 
+
+El contenido de este archivo debe ser:
+
+#!/bin/sh
+
+###
+#
+# FILE: tomcat
+#  
+# USAGE: Manage Tomcat server startup and shutdown
+#
+# AUTHOR: Olaf Reitmaier <olafrv@gmail.com> (Rev. 03/09/2008)
+#
+# URL: olafrv.googlepages.com/tomcat-service
+# 
+# HOW-TO: As root: 
+#         1. Put this file in /etc/init.d/
+#         2. Execute update-rc.d tomcat defaults
+#         3. Modify the "Configuration" of this file
+#         4. Create tomcat user and group, with:
+#	     adduser --system --home /var/opt/tomcat \
+#		--shell /bin/bash --no-create-home \
+#		--group tomcat --disabled-password
+#         5. Execute /etc/init.d/tomcat for help
+#         6. Create directory $CATALINA_HOME/run 
+##
+
+#################
+# Configuration #
+#################
+
+# * are vars needed by catalina.sh !!!
+
+# Tomcat install PATH (*)
+CATALINA_HOME=/var/opt/tomcat
+
+# Run JVM as server
+JAVA_OPTS="-server"
+
+# Java (jdk) install PATH (*)
+if [ -z "$JAVA_HOME" ]; then
+	if [ -d /var/opt/java ]; then
+		JAVA_HOME=/var/opt/java
+	else
+		echo "JAVA_HOME is not defined (expected in: /var/opt/java)."
+		exit 1
+	fi
+fi
+
+# The pid file of Tomcat process (*)
+CATALINA_PID=$CATALINA_HOME/run/tomcat.pid
+
+# Tomcat user and group
+CATALINA_USER=tomcat
+CATALINA_GROUP=tomcat
+
+# The pid file of Tomcat process
+CATALINA_SYS_PID=/var/run/tomcat.pid
+
+# Variable definition on env
+export JAVA_OPTS CATALINA_HOME JAVA_HOME CATALINA_PID CATALINA_SYS_PID
+
+# Verificar usuario root
+if [ ! `id -u` -eq 0 ]; then
+	echo "You must be root to execute this command."
+	exit 1
+fi
+
+# Crear el directorio run/
+if [ ! -d $CATALINA_HOME/run ]
+then
+	mkdir -p $CATALINA_HOME/run
+fi
+
+# File permission check (comment if you be check it yourself)
+chown -R $CATALINA_USER:$CATALINA_GROUP $CATALINA_HOME
+chmod -R 770 $CATALINA_HOME
+
+###################################################
+# Do not edit if don't know what you are doing!!! #
+###################################################
+
+DATE_FORMAT="+%Y.%m.%d_%H.%M.%S"
+
+case "$1" in
+    start)
+        echo "Starting Tomcat..."
+        if [ -x $CATALINA_HOME/bin/startup.sh ] ; then
+	    if [ ! -f $CATALINA_PID ]; then
+	       mv $CATALINA_HOME/logs/catalina.out $CATALINA_HOME/logs/"catalina.out_"`date $DATE_FORMAT`".txt"
+	       echo > $CATALINA_HOME/logs/catalina.out
+	       chown $CATALINA_USER:$CATALINA_GROUP $CATALINA_HOME/logs/catalina.out
+	       su $CATALINA_USER -c "$CATALINA_HOME/bin/startup.sh"
+	       ln -s $CATALINA_PID $CATALINA_SYS_PID
+	    else
+	       echo "Still running ("`cat $CATALINA_PID`")..."	  
+	       exit 1
+	    fi
+        fi
+        echo "done."
+        ;;
+    stop)
+        if [ ! -f $CATALINA_PID ] ; then
+            echo "Not running, can't stop it."
+	    exit 1
+        else
+            echo "Stopping Tomcat..."
+            if [ -x $CATALINA_HOME/bin/shutdown.sh ]; then
+                su $CATALINA_USER -c "$CATALINA_HOME/bin/shutdown.sh -force"
+                rm -f $CATALINA_PID
+		rm -f $CATALINA_SYS_PID
+            fi
+            echo "done."
+        fi
+        ;;
+    kill)
+        if [ ! -f $CATALINA_PID ] ; then
+            echo "Not running, can't kill it."
+	    exit 1
+	else
+   	    echo "Killing Tomcat ("`cat $CATALINA_PID`")"
+	    su tomcat -c "kill -9 "`cat $CATALINA_PID`
+	    rm -f $CATALINA_PID
+  	    rm -f $CATALINA_SYS_PID
+	fi
+	;;
+    status)
+        if [ ! -f $CATALINA_PID ] ; then
+           echo "Not running."
+	else
+	   echo "Listing Tomcat process status..."
+	   su tomcat -c "ps -o pid,gid,cpu,time,cmd -p `cat $CATALINA_PID` | more"
+	fi
+	;;
+    restart)
+        echo "Restarting Tomcat..."
+        if [ -f $CATALINA_PID ]; then
+            if [ -x $CATALINA_HOME/bin/shutdown.sh ]; then
+                su $CATALINA_USER -c "$CATALINA_HOME/bin/shutdown.sh -force"
+                rm -f $CATALINA_PID
+		rm -f $CATALINA_SYS_PID
+            fi
+            echo
+        fi
+	sleep 3s
+        if [ -x $CATALINA_HOME/bin/startup.sh ] ; then
+            mv $CATALINA_HOME/logs/catalina.out $CATALINA_HOME/logs/"catalina.out_"`date $DATE_FORMAT`".txt"
+	    echo > $CATALINA_HOME/logs/catalina.out
+	    chown $CATALINA_USER:$CATALINA_GROUP $CATALINA_HOME/logs/catalina.out
+            su $CATALINA_USER -c  "$CATALINA_HOME/bin/startup.sh"
+	    ln -s $CATALINA_PID $CATALINA_SYS_PID
+        fi
+        echo "done."
+        ;;
+    *)
+        echo "Usage: $0 { start | stop | restart | status | kill }"
+        exit 1
+        ;;
+esac
+
+exit 0 
+
+
+-------------------------------
+ 6.2.4. Ejecución del Servicio
+-------------------------------
+
+Para iniciar el servicio:
+
+root$ /etc/init.d/tomcat start
+
+Para verificar el estado del servicio:
+
+root$ /etc/init.d/tomcat status
+
+Para detener el servicio:
+
+root$ /etc/init.d/tomcat stop
+
+Para reiniciar (start + stop):
+
+root$ /etc/init.d/tomcat restart
+
+
+
+--------------------------------------------
+ 6.2.5. Conexión JDBC con una Base de Datos
+--------------------------------------------
+
+Utilice su navegador web para entrar en http://localhost:8080/admin, proporcione la contraseña especificada para el usuario tomcat en el archivo tomcat-users.xml.
+
+Navegue por la Interfaz para modificar los datos del contexto para su aplicación "miaplicacion" colocada en webapps/ del directorio de instalación de Tomcat, como sigue: Tomcat Server > Servicio (Catalina) > Host (localhost) > Context ("miaplicacion") > Recursos > Fuentes de Datos.
+
+Cree un nuevo manejador de conexiones JDBC, seleccione "Crear una Nueva Fuente de Datos" colocando los siguientes parámetros:
+
+NOTA: EL URL debe contener el servidor y el nombre de la base de datos, el usuario no debería ser postgres por razones de seguridad y cumplimiento de las mejores prácticas de base de datos.
+
+Nombre JNDI: Mi Base de Datos
+URL de Fuente de Datos: jdbc:postgresql://localhost/mibasededatos
+Clase de Manejador JDBC: org.postgresql.Driver
+Nombre de Usuario: postgres
+Contraseña: 12345
+
+Ahora presione los botones Guardar, y luego, Acometer Cambios.
+
+Finalmente, reinicie tomcat.
+
+
+======================================
+ 7. Servidor de Páginas Web (apache2)
+======================================
+
+------------------------------
+ 7.1. Instalación y Ejecución
+------------------------------
+
+NOTA: Aqui utilizaremos una de las versiones de apache 2 incluídas con el sistema operativo.
+
+root$ apt-get install apache2
+
+Para iniciar el servicio:
+
+root$ /etc/init.d/apache2 start
+
+Para verificar el estado del servicio:
+
+root$ /etc/init.d/apache2 status
+
+Para detener el servicio:
+
+root$ /etc/init.d/apache2 stop
+
+Para reiniciar (start + stop):
+
+root$ /etc/init.d/apache2 restart
+
+--------------------
+ 7.2. Configuración
+--------------------
+
+Edite el archivo de configuración de apache:
+
+root$ pico /etc/apache2/apache2.conf
+
+Coloque el siguiente parámetro (por seguridad):
+
+ServerTokens Prod
+
+Edite el archivo de configuración de apache para el sitio default:
+
+root$ pico /etc/apache2/sites-enabled/000-default
+
+Comente las siguientes líneas:
+
+#Alias /doc/ "/usr/share/doc/"
+#<Directory "/usr/share/doc/">
+#    Options Indexes MultiViews FollowSymLinks
+#    AllowOverride None
+#    Order deny,allow
+#    Deny from all
+#    Allow from 127.0.0.0/255.0.0.0 ::1/128
+#</Directory>
+
+
+=======================================
+ 8. Redirección de Servidores (mod-jk)
+=======================================
+
+------------------
+ 8.1. Instalación
+------------------
+
+Instale el módulo jk para interconectar (redireccionar) parcial o totalmente las peticiones hechas al servidor web apache hacia el servidor de aplicaciones apache tomcat:
+
+root$ apt-get install libapache2-mod-jk
+
+Configure el módulo y cree un worker o trabajador encargado redireccionar las peticiones hacia apache tomcat desde el servidor web apache, para ello edite el siguiente archivo:
+
+root$ pico /etc/libapache2-mod-jk/workers.properties
+
+--------------------
+ 8.2. Configuración
+--------------------
+
+Defina las siguientes variables (descomente, edite o coloque si no existen):
+
+workers.tomcat_home=/opt/tomcat
+workers.java_home=/opt/java
+ps=/
+
+worker.list=ajp13_worker
+
+worker.ajp13_worker.port=8009
+worker.ajp13_worker.host=localhost
+worker.ajp13_worker.type=ajp13
+
+worker.ajp13_worker.lbfactor=1
+
+worker.loadbalancer.type=lb
+worker.loadbalancer.balanced_workers=ajp13_worker
+
+Habilite el módulo jk en el servidor web apache:
+
+root$ cd /etc/apache2/mods-enabled
+
+ln -s ../mods-available/jk.load
+
+El nombre del worker es ajp13_worker, ahora edite el archivo jk.load:
+
+root$ pico jk.load
+
+Y coloque las siguientes líneas en el mismo:
+
+# Load mod_jk module
+LoadModule jk_module /usr/lib/apache2/modules/mod_jk.so
+
+# Declare the module for <IfModule directive> (Comment this line on Apache 2.0.x)
+# AddModule     mod_jk.c
+
+# Where to find workers.properties
+JkWorkersFile   /etc/libapache2-mod-jk/workers.properties
+
+# Where to put jk shared memory
+JkShmFile     /var/log/apache2/mod_jk.shm
+
+# Where to put jk logs
+JkLogFile     /var/log/apache2/mod_jk.log
+
+# Set the jk log level [debug/error/info]
+JkLogLevel    info
+
+# Select the timestamp log format
+JkLogStampFormat "[%a %b %d %H:%M:%S %Y] "
+
+NOTA: Para redireccionar el directorio /website de apache hacia tomcat coloque adicionalmente las siguientes líneas:
+
+# Redirections mounts
+JkMount  /website/* ajp13_worker
+JkMount  /website ajp13_worker
+
+NOTA: Para habilitar el módulo debe reiniciar el servidor web apache.
+
+
+=========================================
+ 9. Respaldos del Servidor (tape-backup)
+=========================================
+
+El script de respaldo y su documentación pueder ser descargada desde http://olafrv.googlepages.com/tapebackup.
+
+------------------
+ 9.1. Instalación
+------------------
+
+root$ cd /root
+root$ wget http://olafrv.googlepages.com/tape-backup.tar.gz
+root$ cd /var/opt
+root$ tar xvfz /root/tape-backup.tar.gz
+
+Cree en acceso directo:
+
+root$ ln -s /var/opt/tape-backup/bin/tape-backup.sh /usr/bin/tape-backup.sh
+
+Ajuste los permisos de los archivos:
+
+ADVERTENCIA: No ajustar los permisos puede hacer que contraseñas requeridas para hacer backup puedan ser visualizadas por otros usuarios del sistema.
+
+root$ chmod -R 770 /var/opt/tape-backup
+root$ chown -R root:root /var/opt/tape-backup
+
+Siga las instrucciones del manual de instalación incluído en el directorio docs.
+
+--------------------
+ 9.2. Configuración
+--------------------
+
+Edite el archivo tape-backup.sh
+
+root$ pico /var/opt/tape-backup/bin/tape-backup.sh
+
+Y edite el valor de las siguientes variables según se muestran aquí:
+
+TMP_DIR="/var/opt/backups"
+REST_DIR="/var/opt/backups/restore"
+LOG_DIR="/var/log/tape-backup"
+TMP_PART=/var
+PORCENTAJE=15
+DST_TAPE="/dev/nst0"
+TAR="/bin/tar"
+PSQL="/usr/bin/psql"
+PGDUMP="/usr/bin/pg_dump"
+GZIP="/bin/gzip"
+DST_TAR_ROOT="tbk"
+CP_TO_TAPE=0
+CP_TO_SMB=1
+
+Puede conseguir más información de dichas variables dentro del mismo archivo.

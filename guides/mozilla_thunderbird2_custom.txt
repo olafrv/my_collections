@@ -1,0 +1,610 @@
+
+ -----------------------------------------------------
+ / Manual de Personalización de Mozilla Thunderbird /
+-----------------------------------------------------
+
+------------------------------------------------------------------
+ Autor: Olaf Reitmaier Veracierta <olafrv@gmail.com> 
+ Última Modificación: 19 de Septiembre de 2008                         
+ Pruebas: Windows/Linux + Mozilla Thunderbird 2.0.0.16                           
+ Recomendaciones: 1.- Visite www.mozilla.org (Sección developers)
+                  2.- Refresque su memoria con JavaScript y XML   
+                  3.- No cambie el formato de este archivo,       
+                      así es mejor, más fácil y rápido.           
+------------------------------------------------------------------
+
+-------------
+| Contenido |
+-------------
+
+- Respaldando Perfiles
+- Descargando los archivos base
+- Cuidado con los archivos ~
+- Configuración de Iconos
+- Configuración de Sonidos (Recepción)
+- Configuración de las Preferencias
+- Configuración de las Extensiones
+- Configuración de la Pantalla de Splash
+- Configuración del Icono en la Barra de Menú
+- Script de Instalación (Windows)
+- Script de Instalación (Linux)
+
+------------------------
+| Respaldando Perfiles |
+------------------------
+
+En Windows:
+
+- Haga un respaldo de los directorios:
+
+   C:\Documents and Settings\<usuario>\Datos de Programa\Thunderbird
+
+A veces también del directorio:
+
+   C:\Documents and Settings\<usuario>\Configuración Local\Datos de Programa\Thunderbird
+
+En Linux:
+
+- Haga un respaldo de los directorios:
+
+   /home/<usuario>/.thunderbird
+
+A veces también del directorio:
+
+   /home/<usuario>/.mozilla-thunderbird
+
+
+---------------------------------
+| Descargando los archivos base |
+---------------------------------
+
+AVISO: El directorio /binarios tiene los archivos 
+binarios de thunderbird para plataformas Windows y Linux.
+
+En Windows:
+
+- Descargue el instalador .EXE de Thunderbird, instalelo sin ejecutarlo.
+  Los archivos base de thunderbird (originales) están en el directorio
+  C:\Archivos de Programa\Mozilla Thunderbird.
+
+- Elimine el archivo install.log
+
+- Elimine el directorio /extensions/talkback@mozilla.org, que es la 
+  extension del Quality Feedback Agent de Mozilla.
+
+En Linux:
+
+- Decargue Thunderbird.tar.gz para linux.
+
+- Elimine el directorio /extensions/talkback@mozilla.org, que es la 
+  extension del Quality Feedback Agent de Mozilla.
+
+
+------------------------------
+| Cuidado con los archivos ~ |
+------------------------------
+
+En linux y en Windows debe tener cuidado de no
+dejar dentro de los directorios de la aplicación 
+archivos temporales que terminen en "~". Estos
+archivo en especial *.js~ pueden ser sobreescribir
+la preferencias o comandos de los archivos *.js en
+el mismo directorio.
+
+Puede eliminarlos (en linux) con los siguientes comandos:
+
+   find . | grep "~" 
+
+Para conocer si existen este tipo de archivo dentro de un 
+directorio, y para eliminarlos ejecute:
+
+   find . | grep "~" | xargs rm
+
+
+---------------------------
+| Configuración de Iconos |
+---------------------------
+
+AVISO: En el directorio /multimedia/iconos están los 
+iconos que deben colocarse en el directorio /icons
+de los archivos de instalación de thunderbird.
+
+El archivo .ico es solo necesario para Windows.
+
+En Windows:
+
+- No es necesario hacer nada porque los iconos están 
+  compactados dentro de los archivos .EXE de thunderbird
+
+En Linux:
+
+- Abra con GIMP los archivos .XPM y conviertalos a .PNG
+  ubicados en el directorio /icons, esto no es obligatorio
+  solo permite tener acceso a los iconos de thunderbird.
+
+----------------------------------------
+| Configuración de Sonidos (Recepción) |
+----------------------------------------
+
+AVISO: En el directorio /multimedia/sounds están los 
+sonidos que deben colocarse en el directorio /sounds
+de los archivos de instalación de thunderbird.
+
+-------------------------------------
+| Configuración de las Preferencias |
+-------------------------------------
+
+- Las preferencias predeterminadas (distintas a modificadas por el 
+  usuario) para todos los usuarios estan en el directorio /defaults/pref
+
+-  Para cambiar las páginas de inicio modifique le archivo
+   /defaults/pref/thunderbird-branding.js coloque estas líneas
+   (y comente o elimine las ya existentes):
+
+   //Modificado para la DEM
+   pref("mailnews.start_page.url", "http://intranet.dem.gob.ve/");
+   pref("mailnews.start_page.welcome_url", "http://intranet.dem.gob.ve/");
+   pref("mailnews.start_page.override_url", "http://intranet.dem.gob.ve/");
+
+-  Para desactivar las actualizaciones automáticas modifique el archivo
+   /defaults/pref/all-thunderbird.js coloque estas líneas
+   (y comente o elimine las ya existentes):
+
+   pref("app.update.enabled", false); 
+   pref("app.update.auto", false);
+   pref("extensions.update.enabled", false);
+
+- Existen preferencias generales que deben ser modificadas en el directorio
+  /grepref (General Runtime Enviroment):
+  
+  En el archivo xpinstall.js, para deshabilitar las instalaciones manuales
+  de extensiones y temas:
+
+  pref("xpinstall.enabled", false);
+
+  Sin embargo, el usuario puede cambiar esto e instalar.
+
+- Algunas preferencias se deben modificar a nivel del perfil del usuario
+en el archivo /defaults/profile/prefs.js (algunas dependen del sistema
+operativo):
+
+En Windows o Linux:
+
+   //Lightning - DEM
+   user_pref("calendar.timezone.local", "/mozilla.org/20071231_1/America/Caracas");
+
+En Linux:
+
+   //Sonido Correo Nuevo - DEM (Linux)
+   user_pref("mail.biff.always_show_icon", true);
+   user_pref("mail.biff.play_sound.type", 1);
+   user_pref("mail.biff.play_sound.url", "file:///opt/thunderbird/sounds/Correo-DEM.wav");
+
+En Windows o Linux:
+
+//Skin - Theme - DEM
+user_pref("general.skins.selectedSkin", "AzertyMail");
+
+En Windows:
+
+   //Sonido Correo Nuevo - DEM (Windows)
+   user_pref("mail.biff.always_show_icon", true);
+   user_pref("mail.biff.play_sound.type", 1);
+   user_pref("mail.biff.play_sound.url", "file:///C:/WINDOWS/Media/Correo-DEM.wav");
+
+En Windows o Linux:
+
+   //LDAP - DEM
+   user_pref("ldap_2.autoComplete.directoryServer", "ldap_2.servers.DEM");
+   user_pref("ldap_2.autoComplete.useDirectory", true);
+   user_pref("ldap_2.prefs_migrated", true);
+   user_pref("ldap_2.servers.DEM.auth.savePassword", true);
+   user_pref("ldap_2.servers.DEM.description", "DEM");
+   user_pref("ldap_2.servers.DEM.filename", "abook-1.mab");
+   user_pref("ldap_2.servers.DEM.replication.lastChangeNumber", 0);
+   user_pref("ldap_2.servers.DEM.uri", "ldap://ccsdtfdemcor01:389/O=DEM, C=VE??sub?(objectclass=*)");
+   user_pref("ldap_2.servers.default.filename", "default.mab");
+   user_pref("ldap_2.servers.default.replication.lastChangeNumber", 0);
+   user_pref("ldap_2.servers.default.uri", "moz-abldapdirectory://default.mab");
+   user_pref("ldap_2.servers.history.replication.lastChangeNumber", 0);
+   user_pref("ldap_2.servers.pab.replication.lastChangeNumber", 0);
+
+   //Email - DEM
+   user_pref("mail.SpellCheckBeforeSend", true);
+   user_pref("mail.attachment.store.version", 1);
+   user_pref("mail.folder.views.version", 1);
+   user_pref("mail.forward_message_mode", 2);
+   user_pref("mail.preferences.advanced.selectedTabIndex", 3);
+   user_pref("mail.preferences.compose.selectedTabIndex", 0);
+   user_pref("mail.preferences.display.selectedTabIndex", 0);
+   user_pref("mail.preferences.privacy.selectedTabIndex", 3);
+   user_pref("mail.spam.version", 1);
+   user_pref("mail.startup.enabledMailCheckOnce", true);
+
+
+------------------------------------
+| Configuración de las Extensiones |
+------------------------------------
+
+ADVERTENCIA: La extension talkback@mozilla.org no es necesaria
+             es el Quality Feedback Agent de Mozilla, y por lo tanto,
+             puede eliminarse el directorio en /extensions
+
+ADVERTENCIA: Cierre cualquier instancia de 
+             thunderbird que se esté ejecutando.
+
+ADVERTENCIA: Para algunas extensiones (i.e. reminderfox) es necesario
+             dar permisos 777 de forma TEMPORAL a la carpeta thunderbird/
+             porque la primera vez que se inicia el programa, la extensión
+             se instala y crea unos archivos especiales en dicha carpeta, 
+             también puede requerirse inclusive después de esto instalar la
+             extensión desde el menú Herramientas > Complementos para que 
+             funcione correctamente. 
+
+- Descargue la extension para thunderbird (archivo .xpi)
+
+ADVERTENCIA: Puede instalarlo desde thunderbird en el menu extensiones,
+             pero esto se instala sólo para el usuario que ha iniciado
+             sesión en el equipo.
+
+- Renombre el archivo .xpi a .xpi.zip
+
+- Descomprima el archivo .xpi.zip
+
+- Edite el archivo de texto install.rdf
+
+- Busque las siguientes líneas (Piense en un archivo XML
+  para entender la jerarquía de su estructura por niveles):
+
+  <Description about="urn:mozilla:install-manifest">
+    <em:id>{4dce973c-25a5-4657-8e37-6c2a85c24a7e}</em:id>
+    <em:version>0.7.1</em:version>
+    <em:type>2</em:type>
+
+- Copie el identificador de clases que esta entre llaves
+  {4dce973c-25a5-4657-8e37-6c2a85c24a7e} y cree una carpeta 
+  con ese nombre, luego, copie dentro de ella todos los
+  archivos extraidos del archivo .xpi.zip.
+
+- ADVERTENCIA:
+    Algunas extesiones tienen el mismo identificador de clases
+    aunque funcionan están destinadas para sistemas operativos
+    diferentes, aquí las etiquetamos con -win, -linux, etc.
+    Sin embargo, antes de copiarlas al directorio /extensions
+    de thunderbird debe eliminarles la etiqueta, por ejemplo,
+    la extension de lightning para calendario cuyo id es
+    {e2fda1a4-762b-4020-b5ad-a41df1933103}
+
+- Copie la carpeta creada anteriormente al directorio 
+  /extensions de thunderbird.
+
+
+
+------------------------------------------
+| Configuración de la Pantalla de Splash |
+------------------------------------------
+
+AVISO: En el directorio /multimedia/splash están los 
+archivos que den colocarse en el directorio de la 
+extension de Splash.
+
+ADVERTENCIAS: Cierre cualquier instancia de 
+              thunderbird que se esté ejecutando.
+              
+              Para probar utilice un perfil nuevo,
+              nunca utilice el existente (Haga un Respaldo).
+
+              No elimine ni sobreescriba la extensión
+              {972ce4c6-7e08-4474-a285-3208198ce6fd}
+
+En Windows = En Linux:
+
+- Edite el archivo /defaults/preferences/splash.js en el directorio
+  de la extensión Splash (/splash@aldreneo.com) ubicado en el
+  directorio /extensions de thunderbird, elimine todas las lineas
+  de preferencias que tengan que ver con el nombre de la imagen,
+  alto y ancho, el archivo de sonido y si esta última opción está activa.
+
+  Quedaría algo así:
+
+   pref("extensions.splash@aldreneo.com.description", "chrome://splash/locale/splash.properties");
+
+   pref("splash.enabled", true);
+   pref("splash.timeout", 3000);
+   pref("splash.closeWithMainWindow", false);
+   pref("splash.bgcolor", "#FFFFFF");
+   pref("splash.windowStyle", "padding: 0px;");
+
+   pref("splash.imageURL", "chrome://splash/content/images/Splash-DEM.png");
+   pref("splash.soundEnabled", true);
+   pref("splash.soundURL", "chrome://splash/content/sounds/Splash-DEM.wav");
+   pref("splash.windowHeight", 236);
+   pref("splash.windowWidth", 300);
+
+   pref("splash.textHide", false);
+   pref("splash.progressMeterHide", false);
+   pref("splash.textOverride", "");
+   pref("splash.textStyle", "font-family: sans-serif; font-size: medium; font-weight: bold; text-align: center;");
+   pref("splash.txtcolor", "#000000");
+
+   pref("splash.trans", false);
+   pref("splash.transvalue_img", ".5");
+   pref("splash.transvalue_txt", ".5");
+   pref("splash.transvalue_box", ".5");
+   pref("splash.transvalue_mtr", ".5");
+
+   pref("browser.preferences.animateFadeIn", false);
+
+- En el directorio /chrome en el directorio de la extensión 
+  Splash (/splash@aldreneo.com) ubicado en el directorio /extensions
+  de thunderbird, existe el archivo "splash.jar", descomprimalo.
+
+  Aparecen dos (2) directorios, /content y /locale.
+
+  Copie la imagen Splash-DEM.png en el directorio /content/images
+
+  Cree el directorio /content/sounds
+
+  Copie el sonido Splash-DEM.wav en el directorio /content/sounds
+  
+  Modifique el archivo /content/splash.js, cambiando la imagen
+  predeteminada para Thunderbird, las siguientes líneas se refieren
+  a dicha información (comente //):
+
+  getDefaultImage: function() {
+    var splashDefaultURL
+
+    switch (splash.getAppName()) {
+      case "Songbird":
+        splashDefaultURL = "chrome://songbird-branding/skin/about.png";
+        nsPreferences.setIntPref("splash.windowHeight", 120)
+        nsPreferences.setIntPref("splash.windowWidth", 390)
+        break;
+      case "Thunderbird":
+        splashDefaultURL = "chrome://branding/content/about-thunderbird.png";
+        break;	
+    }
+    // DEM
+    splashDefaultURL = "chrome://splash/content/images/Splash-DEM.png";
+    nsPreferences.setIntPref("splash.windowHeight", 236);
+    nsPreferences.setIntPref("splash.windowWidth", 300);
+    // DEM
+    return splashDefaultURL;
+  },
+
+-  Comprima nuevamente los directorios /content y /locale en el 
+   al archivo /chrome/splash.jar
+
+  Edite el archivo /components/splash.js en el directorio
+  de la extensión Splash (/splash@aldreneo.com) ubicado en el
+  directorio /extensions de thunderbird:
+
+  var isEnabled = prefService.getBoolPref("splash.soundEnabled")
+  var soundURL = prefService.getComplexValue("splash.soundURL", Components.interfaces.nsISupportsString).data;
+  // DEM
+  soundURL = "chrome://splash/content/sounds/Splash-DEM.wav";
+  isEnabled = true;
+  // DEM
+
+-  Reinice thunderbird.
+
+
+------------------------------------------
+| Configuración de la Pantalla de Splash |
+------------------------------------------
+
+AVISO: En el directorio /multimedia/icons están los 
+archivos que den colocarse en el directorio de la 
+extension Custom Buttons.
+
+ADVERTENCIAS: Cierre cualquier instancia de 
+              thunderbird que se esté ejecutando.
+              
+              Para probar utilice un perfil nuevo,
+              nunca utilice el existente (Haga un Respaldo).
+
+              No elimine ni sobreescriba la extensión
+              {972ce4c6-7e08-4474-a285-3208198ce6fd}
+
+En Windows = En Linux:
+
+- En el directorio /chrome en el directorio de la extensión 
+  Custom Buttons (/custombuttons@xsms.org) ubicado en el directorio
+  /extensions de thunderbird, existe el archivo "custombuttons.jar", 
+  descomprimalo.
+
+  Aparecen dos (3) directorios, /content, /locale y /skin.
+
+  Copie la imagen Boton-Correo-DEM.gif en el directorio /content/custombuttons
+
+ 
+- Modifique el archivo /content/custombuttons/buttonsoverlay.xul quedando algo así:
+
+<overlay id="custombuttons-profile-overlay"
+		 xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+	<!-- Firefox -->
+	<toolbarpalette id="BrowserToolbarPalette"/>
+	
+	<!-- Thunderbird -->
+	<toolbarpalette id="MailToolbarPalette">
+         <!-- main window -->
+         <toolbarbutton class="toolbarbutton-1 chromeclass-toolbar-additional" id="custombuttons-button0" label="" image="chrome://custombuttons/content/Boton-Correo-DEM.gif" cb-oncommand="/*CODE*/" cb-init="/*Initialization Code*/" context="custombuttons-contextpopup" tooltiptext="" Help=""/>
+      </toolbarpalette>
+
+	<toolbarpalette id="MsgComposeToolbarPalette"/> <!-- message compose -->
+	
+	<!-- Sunbird -->
+	<toolbarpalette id="calendarToolbarPalette"/>
+
+</overlay>
+
+- Comprima nuevamente los directorios /content, /locale y skin en el 
+  al archivo /chrome/custombuttons.jar
+
+- Edite el archivo /thunderbird/defaults/profile/localstore.rdf,
+  de esta forma se mostrará el botón con la imagen en la barra de menú,
+  queda algo así:
+
+<?xml version="1.0"?>
+<RDF:RDF
+     xmlns:NC="http://home.netscape.com/NC-rdf#"
+     xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <RDF:Description RDF:about="chrome://messenger/content/messenger.xul">
+    <NC:persist RDF:resource="chrome://messenger/content/messenger.xul#mail-toolbar-menubar2"/>
+  </RDF:Description>
+  <RDF:Description RDF:about="chrome://messenger/content/messenger.xul#mail-toolbar-menubar2"
+                        currentset="menubar-items,spring,custombuttons-button0,throbber-box" />
+</RDF:RDF>
+
+- Reinicie thunderbird, si tiene problemas
+  puede eliminar el directorio extension/,
+  extension.* y localstore.rdf del perfil
+  para forzar la carga de las preferencias
+  predeterminadas empaquetadas con Thunderbird.
+  
+
+------------------------------------
+| Scripts de Instalación (Windows) |
+------------------------------------
+
+Estos scripts deben copiarse en la carpeta que
+contiene los archivos del paquete de instalación
+en este caso thundebird/, la cual, hemos estado
+modificando con este manual.
+
+NOTA: Recuerde también copiar en la carpeta 
+thunderbird/ el archivo Shortcut.exe que 
+puede descargarse desde Internet desde la 
+página www.systemtools.com
+
+----------------
+| instalar.bat |
+----------------
+
+@echo off
+
+echo Instalando...
+
+set DIR=thunderbird
+
+set ESCRITORIO="%ALLUSERSPROFILE%\Escritorio\Correo - DEM.lnk"
+
+set EXE="%ProgramFiles%\%DIR%\thunderbird.exe"
+
+set ICONO="%ProgramFiles%\%DIR%\icons\Correo-DEM.ico"
+
+set INICIO="%ALLUSERSPROFILE%\Men£ Inicio\Programas\Correo - DEM.lnk"
+
+mkdir "%ProgramFiles%\%DIR%"
+
+xcopy /q /h /e . "%ProgramFiles%\%DIR%"
+
+shortcut.exe /f:%ESCRITORIO% /a:c /t:%EXE% /i:%ICONO%
+
+shortcut.exe /f:%INICIO% /a:c /t:%EXE% /i:%ICONO%
+
+copy .\sounds\Correo-DEM.wav "%WINDIR%\Media\"
+
+echo Instalacion finalizada.
+
+pause
+
+
+-------------------
+| desinstalar.bat |
+-------------------
+
+@echo off
+
+echo Desinstalando...
+
+rmdir /s "%ProgramFiles%\thunderbird"
+
+del "%ALLUSERSPROFILE%\Escritorio\Correo - DEM.lnk"
+
+del "%ALLUSERSPROFILE%\Men£ Inicio\Programas\Correo - DEM.lnk"
+
+del "%WINDIR%\Media\Correo-DEM.wav"
+
+echo Desinstalacion finalizada.
+
+pause
+
+
+-----------------------
+| eliminar-perfil.bat |
+-----------------------
+
+@echo off
+
+echo Eliminando...
+
+rmdir /s "%USERPROFILE%\Datos de programa\Thunderbird"
+rmdir /s "%USERPROFILE%\Configuraci¢n local\Datos de programa\Thunderbird"
+
+echo Eliminacion finalizada.
+
+pause
+
+
+------------------------------------
+| Scripts de Instalación (Linux) |
+------------------------------------
+
+Estos scripts deben copiarse en la carpeta que
+contiene los archivos del paquete de instalación
+en este caso thundebird/, la cual, hemos estado
+modificando con este manual.
+
+---------------
+| instalar.sh |
+---------------
+
+#!/bin/bash
+
+echo Instalando...
+
+mkdir -p /opt/thunderbird/
+cp -R . /opt/thunderbird/
+ln -sf /opt/thunderbird/thunderbird /usr/bin/thunderbird
+chmod -R 755 /opt/thunderbird/
+
+ESCRITORIOS=`ls -d /home/*/Desktop`
+
+for ESCRITORIO in $ESCRITORIOS
+do
+	ARCHIVO=$ESCRITORIO/thunderbird.desktop
+	cat > $ARCHIVO <<FIN
+[Desktop Entry]
+Version=1.0
+Encoding=UTF-8
+Name=Correo - DEM
+Comment=Correo Electronico
+GenericName=Thunderbird
+Terminal=false
+MultipleArgs=false
+Type=Application
+Categories=Application;Network
+Exec=thunderbird
+Icon=/opt/thunderbird/icons/Correo-DEM.png
+FIN
+chmod -R 777 $ARCHIVO
+done
+
+echo Instalacion finalizada.
+
+------------------
+| desinstalar.sh |
+------------------
+
+#!/bin/bash
+
+echo Desinstalando...
+
+rm -rf /opt/thunderbird
+rm /usr/bin/thunderbird
+rm /home/*/Desktop/thunderbird.desktop
+
+echo Desinstalacion finalizada.
+

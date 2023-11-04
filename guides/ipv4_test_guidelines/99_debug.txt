@@ -1,0 +1,17 @@
+# Send random data to 53 udp port
+nc -u <host> 53 < /dev/random
+
+# Send random data to 80 tcp port
+nc <host> 80 < /dev/random
+
+# Show localhost-localhost traffic related to 80/tcp port
+tcpdump -i lo port 80
+
+# Sniffing filtered by remote MAC Addres
+tshark -V -f "ether host 01:00:5e:00:00:01" -i eth2 | less
+
+# Sniffing filtered by packet destination port
+tshark -V -f "dst port 1234" -i eth1 | less
+
+# 24000 UDP port broadcast
+socat - UDP-DATAGRAM:255.255.255.255:24000,broadcast < /dev/random
