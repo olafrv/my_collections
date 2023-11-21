@@ -38,3 +38,8 @@ The year below is the time when I started the project or was at its peak.
 * 2009, https://github.com/olafrv/blowfish
 * 2008, https://github.com/olafrv/hpacucli
 * 1999, https://github.com/olafrv/tic-tac-toe
+
+# Code Snippets
+
+* https://gist.github.com/olafrv
+
