@@ -1,3 +1,5 @@
+#!/bin/bash
+
 kernel=3.13.0-83-generic
 
 cd ~/linux-3.13.0

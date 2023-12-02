@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ###
 # FILE: denyhosts-remove.sh (2011/Abr/06)
 # AUTHOR: Olaf Reitmaier Veracieta
@@ -5,8 +7,6 @@
 #      https://denyhosts.sourceforge.net/faq.html#3_19
 # WARNING: Tested on Debian Squeeze
 ##
-
-#!/bin/bash
 
 DENYDIR=/var/lib/denyhosts
 

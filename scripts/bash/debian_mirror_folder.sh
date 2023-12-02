@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ###
 # FILE:  
 #   pckgz.sh (14-Jul-2008)

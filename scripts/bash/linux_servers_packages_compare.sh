@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ###
 # FILE: dpkg-diff.sh
 # AUTHOR: Olaf Reitmaier 
