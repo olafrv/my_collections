@@ -24,7 +24,6 @@ The year below is the time when I started the project or was at its peak.
 * 2022, https://github.com/olafrv/olafrv.github.io
 * 2022, https://github.com/olafrv/pycatdetector
 * 2022, https://github.com/olafrv/ova4win
-* 2021, https://github.com/olafrv/mtrview
 * 2020, https://github.com/olafrv/mdtocf
 * 2020, https://github.com/olafrv/k8s
 * 2018, https://github.com/olafrv/daycopass
