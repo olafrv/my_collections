@@ -32,7 +32,6 @@ The year below is the time when I started the project or was at its peak.
 * 2015, https://github.com/olafrv/fence_vmware_soap
 * 2014, https://github.com/olafrv/nagios_plugins
 * 2012, https://github.com/olafrv/tape-backup
-* 2011, https://github.com/olafrv/futbolista
 * 2011, https://github.com/olafrv/tomcat-check
 * 2009, https://github.com/olafrv/blowfish
 * 2008, https://github.com/olafrv/hpacucli
