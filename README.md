@@ -17,6 +17,7 @@ For majority of them, there was no control versioning.
 Anything that is not in this collection, is in a dedicated repository.\
 The year below is the time when I started the project or was at its peak.
 
+* 2025, https://github.com/olafrv/shollama
 * 2023, https://github.com/olafrv/shopiwar
 * 2023, https://github.com/olafrv/ai_chat_llama2
 * 2023, https://github.com/olafrv/blinkstick_square
