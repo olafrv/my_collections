@@ -18,6 +18,7 @@ Anything that is not in this collection, is in a dedicated repository.\
 The year below is the time when I started the project or was at its peak.
 
 * 2025, https://github.com/olafrv/shollama
+* 2024, https://github.com/olafrv/blowfish (v2)
 * 2023, https://github.com/olafrv/shopiwar
 * 2023, https://github.com/olafrv/ai_chat_llama2
 * 2023, https://github.com/olafrv/blinkstick_square
@@ -34,7 +35,7 @@ The year below is the time when I started the project or was at its peak.
 * 2014, https://github.com/olafrv/nagios_plugins
 * 2012, https://github.com/olafrv/tape-backup
 * 2011, https://github.com/olafrv/tomcat-check
-* 2009, https://github.com/olafrv/blowfish
+* 2009, https://github.com/olafrv/blowfish (v1)
 * 2008, https://github.com/olafrv/hpacucli
 * 1999, https://github.com/olafrv/tic-tac-toe
 
