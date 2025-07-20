@@ -17,6 +17,7 @@ For majority of them, there was no control versioning.
 Anything that is not in this collection, is in a dedicated repository.\
 The year below is the time when I started the project or was at its peak.
 
+* 2025, https://github.com/olafrv/nvidia-docker-wsl
 * 2025, https://github.com/olafrv/shollama
 * 2024, https://github.com/olafrv/blowfish (v2)
 * 2023, https://github.com/olafrv/shopiwar
