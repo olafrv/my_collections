@@ -1,7 +1,12 @@
 #!/bin/bash
 
-# https://github.com/pkgxdev/pkgx
-# https://huggingface.co/docs/huggingface_hub/main/en/guides/cli
+###
+# Pre-Requisites (no need to be root):
+# * pkgx: https://github.com/pkgxdev/pkgx
+#   => Install: curl https://pkgx.sh | sh
+# * huggingface-cli: https://huggingface.co/docs/huggingface_hub/main/en/guides/cli
+#   => Install: pkgx install huggingface-cli
+##
 
 HF_URL="$1"
 HF_ROOT_DIR="/volume2/public/huggingface"
