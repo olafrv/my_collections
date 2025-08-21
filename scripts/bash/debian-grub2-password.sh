@@ -16,12 +16,12 @@
 # GRUB 1 (0.X) password (Generated with grub-md5-crypt)
 
 # Escape this string or bash mess it up!!!
-grubpw="\$1\$whX1i\/\$J7lwipZAl3BkaM9b\/DlEB\."
+grubpw="\$1\$whX1i\/\$J7lwipZAl3BkaM9b\/DlEB\."  # change me!!!
 grubcf=/boot/grub/menu.lst
 
 # GRUB 2 (1.X) password
 
-GRUBPW="t0r0nd0y++"
+GRUBPW="for-god-sake-change-me"  # change me!!!
 GRUBCF=/boot/grub/grub.cfg
 
 ################################################################
