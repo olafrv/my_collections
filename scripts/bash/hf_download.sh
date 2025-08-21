@@ -10,6 +10,8 @@
 
 HF_URL="$1"
 HF_ROOT_DIR="/volume2/public/huggingface"
+# https://github.com/huggingface/huggingface_hub/pull/2500/files
+HF_MAX_WORKERS=1
 
 # Check if URL parameter is provided
 if [ -z "$1" ]; then
@@ -39,4 +41,5 @@ local_dir="${repo_path/\//_}"
 
 # Run pkgx download command
 cd $HF_ROOT_DIR && \
-    pkgx huggingface-cli download "$repo_path" --local-dir "$local_dir" --repo-type model
+	pkgx huggingface-cli download "$repo_path" --local-dir "$local_dir" --repo-type model --max-workers $HF_MAX_WORKERS
+
