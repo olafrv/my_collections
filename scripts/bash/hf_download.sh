@@ -25,15 +25,7 @@ fi
 # - https://huggingface.co/XuminYu/example_safetensors/tree/main
 # We want to extract "XuminYu/example_safetensors"
 
-# Remove protocol and domain
-repo_path="${HF_URL#https://huggingface.co/}"
-
-# Strip anything after repo name (like /tree/main, or any trailing path)
-repo_path="${repo_path%%/*}"
-# This would only get username part; better to get two parts
-
-# Instead, better to capture username/reponame (first two path segments)
-# Use a more robust extraction
+# Better to capture username/reponame (first two path segments)
 repo_path=$(echo "$HF_URL" | sed -E 's|https://huggingface.co/([^/]+/[^/]+).*|\1|')
 
 # Replace slash with underscore for local dir
