@@ -17,10 +17,16 @@ For majority of them, there was no control versioning.
 Anything that is not in this collection, is in a dedicated repository.\
 The year below is the time when I started the project or was at its peak.
 
+* 2026, https://github.com/olafrv/nopii-mcp
+* 2026, https://github.com/olafrv/file-copy-macos
+* 2026, https://github.com/olafrv/nopii
 * 2025, https://github.com/olafrv/comfyui_olafrv
 * 2025, https://github.com/olafrv/nvidia-docker-wsl
+* 2025, https://github.com/olafrv/pipaper
 * 2025, https://github.com/olafrv/shollama
+* 2024, https://github.com/olafrv/myip
 * 2024, https://github.com/olafrv/blowfish (v2)
+* 2023, https://github.com/olafrv/mrelay
 * 2023, https://github.com/olafrv/shopiwar
 * 2023, https://github.com/olafrv/ai_chat_llama2
 * 2023, https://github.com/olafrv/blinkstick_square
